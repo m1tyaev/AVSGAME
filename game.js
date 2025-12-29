@@ -35,8 +35,16 @@ setTimeout(initSupabase, 100);
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
 if (tg) {
-    tg.ready();
-    tg.expand();
+    try {
+        tg.ready();
+        tg.expand();
+        // Отключаем вибрацию при ошибках (опционально)
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+    } catch (error) {
+        console.warn('Telegram WebApp инициализация:', error);
+    }
 }
 
 // ==================== DOM ELEMENTS ====================
@@ -692,47 +700,62 @@ function jump() {
 }
 
 function startGame() {
+    console.log('startGame вызвана, gameState:', gameState);
+    
     if (!canvas || !ctx) {
         console.error('Canvas not initialized!');
+        alert('Ошибка: Canvas не инициализирован. Перезагрузите страницу.');
         return;
     }
     
-    initAudio();
-    
-    // Get player name
-    if (playerNameInput) {
-        playerName = playerNameInput.value.trim() || 'Пилот';
-        localStorage.setItem('playerName', playerName);
-    } else {
-        playerName = localStorage.getItem('playerName') || 'Пилот';
-    }
-    
-    gameState = 'playing';
-    score = 0;
-    level = 1;
-    frameCount = 0;
-    obstacles.length = 0;
-    particles.length = 0;
-    obstacleSpawnTimer = 0;
-    explosionTimer = 0;
-    
-    currentSpeed = difficulty.baseSpeed;
-    currentGap = difficulty.baseGap;
-    
-    plane.x = canvas.width * 0.15;
-    plane.y = canvas.height / 2;
-    plane.velocity = 0;
-    plane.rotation = 0;
-    
-    if (startScreen) startScreen.classList.add('hidden');
-    if (gameOverScreen) gameOverScreen.classList.add('hidden');
-    if (scoreDisplay) {
-        scoreDisplay.classList.remove('hidden');
-        scoreDisplay.textContent = '0';
-    }
-    if (levelDisplay) {
-        levelDisplay.classList.remove('hidden');
-        levelDisplay.textContent = 'Уровень: 1';
+    try {
+        initAudio();
+        
+        // Get player name
+        if (playerNameInput) {
+            playerName = playerNameInput.value.trim() || 'Пилот';
+            localStorage.setItem('playerName', playerName);
+        } else {
+            playerName = localStorage.getItem('playerName') || 'Пилот';
+        }
+        
+        gameState = 'playing';
+        score = 0;
+        level = 1;
+        frameCount = 0;
+        obstacles.length = 0;
+        particles.length = 0;
+        obstacleSpawnTimer = 0;
+        explosionTimer = 0;
+        
+        currentSpeed = difficulty.baseSpeed;
+        currentGap = difficulty.baseGap;
+        
+        plane.x = canvas.width * 0.15;
+        plane.y = canvas.height / 2;
+        plane.velocity = 0;
+        plane.rotation = 0;
+        
+        if (startScreen) {
+            startScreen.classList.add('hidden');
+            console.log('Стартовый экран скрыт');
+        }
+        if (gameOverScreen) {
+            gameOverScreen.classList.add('hidden');
+        }
+        if (scoreDisplay) {
+            scoreDisplay.classList.remove('hidden');
+            scoreDisplay.textContent = '0';
+        }
+        if (levelDisplay) {
+            levelDisplay.classList.remove('hidden');
+            levelDisplay.textContent = 'Уровень: 1';
+        }
+        
+        console.log('Игра запущена успешно!');
+    } catch (error) {
+        console.error('Ошибка при запуске игры:', error);
+        alert('Ошибка при запуске игры: ' + error.message);
     }
 }
 
@@ -820,13 +843,37 @@ function initGame() {
     
     // Привязываем обработчики событий
     if (startButton) {
-        startButton.addEventListener('click', startGame);
+        startButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Кнопка "Начать игру" нажата');
+            startGame();
+        });
+        // Дополнительная обработка для touch событий
+        startButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Кнопка "Начать игру" (touch) нажата');
+            startGame();
+        });
     } else {
         console.error('startButton не найден!');
     }
     
     if (restartButton) {
-        restartButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Кнопка "Играть снова" нажата');
+            startGame();
+        });
+        // Дополнительная обработка для touch событий
+        restartButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Кнопка "Играть снова" (touch) нажата');
+            startGame();
+        });
     } else {
         console.error('restartButton не найден!');
     }
