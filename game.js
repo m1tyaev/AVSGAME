@@ -3,11 +3,11 @@ const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
 // Инициализация Supabase с обработкой ошибок (не блокирует запуск игры)
-let supabase;
+let supabaseClient;
 function initSupabase() {
     try {
         if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log('✅ Supabase инициализирован');
         } else {
             throw new Error('Supabase not loaded');
@@ -15,7 +15,7 @@ function initSupabase() {
     } catch (error) {
         console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
         // Создаем заглушку для Supabase
-        supabase = {
+        supabaseClient = {
             from: () => ({
                 select: () => Promise.resolve({ data: [], error: null }),
                 insert: () => Promise.resolve({ error: null }),
@@ -38,13 +38,27 @@ if (tg) {
     try {
         tg.ready();
         tg.expand();
-        // Отключаем вибрацию при ошибках (опционально)
-        if (tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
+        // Настраиваем WebView
+        tg.enableClosingConfirmation();
+        // Устанавливаем цвет фона
+        tg.setHeaderColor('#0a0e27');
+        tg.setBackgroundColor('#0a0e27');
     } catch (error) {
         console.warn('Telegram WebApp инициализация:', error);
     }
+}
+
+// Подавляем предупреждения о неподдерживаемых функциях
+if (typeof window.addEventListener === 'function') {
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+        const message = args.join(' ');
+        // Игнорируем предупреждения о device-orientation
+        if (message.includes('device-orientation') || message.includes('Unrecognized feature')) {
+            return;
+        }
+        originalWarn.apply(console, args);
+    };
 }
 
 // ==================== DOM ELEMENTS ====================
@@ -222,11 +236,11 @@ function initClouds() {
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
-    if (!supabase) {
+    if (!supabaseClient) {
         return [];
     }
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
@@ -245,13 +259,13 @@ async function loadLeaderboard() {
 }
 
 async function saveScore(name, newScore) {
-    if (!supabase) {
+    if (!supabaseClient) {
         console.warn('Supabase не инициализирован, счёт не сохранён');
         return;
     }
     try {
         // Check if player exists
-        const { data: existing } = await supabase
+        const { data: existing } = await supabaseClient
             .from('leaderboard')
             .select('*')
             .eq('name', name)
@@ -260,14 +274,14 @@ async function saveScore(name, newScore) {
         if (existing) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                await supabase
+                await supabaseClient
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
             }
         } else {
             // Add new player
-            await supabase
+            await supabaseClient
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
         }
