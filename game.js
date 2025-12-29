@@ -45,41 +45,73 @@ if (tg) {
 
 // ==================== VIBRATION ====================
 function vibrate(type = 'tap') {
-    // Telegram haptic feedback (лучше работает в Telegram)
+    let vibrated = false;
+    
+    // Telegram haptic feedback (приоритет в Telegram)
     if (tg?.HapticFeedback) {
-        switch(type) {
-            case 'tap':
-            case 'jump':
-                tg.HapticFeedback.impactOccurred('light');
-                break;
-            case 'score':
-                tg.HapticFeedback.impactOccurred('medium');
-                break;
-            case 'explosion':
-                tg.HapticFeedback.impactOccurred('heavy');
-                break;
-            case 'levelup':
-                tg.HapticFeedback.notificationOccurred('success');
-                break;
+        try {
+            switch(type) {
+                case 'tap':
+                case 'jump':
+                    tg.HapticFeedback.impactOccurred('light');
+                    vibrated = true;
+                    console.log('✅ Telegram вибрация: light');
+                    break;
+                case 'score':
+                    tg.HapticFeedback.impactOccurred('medium');
+                    vibrated = true;
+                    console.log('✅ Telegram вибрация: medium');
+                    break;
+                case 'explosion':
+                    tg.HapticFeedback.impactOccurred('heavy');
+                    vibrated = true;
+                    console.log('✅ Telegram вибрация: heavy');
+                    break;
+                case 'levelup':
+                    tg.HapticFeedback.notificationOccurred('success');
+                    vibrated = true;
+                    console.log('✅ Telegram вибрация: success');
+                    break;
+            }
+        } catch (error) {
+            console.warn('❌ Telegram HapticFeedback error:', error);
         }
     }
-    // Browser Vibration API (для обычных браузеров)
-    else if (navigator.vibrate) {
-        switch(type) {
-            case 'tap':
-            case 'jump':
-                navigator.vibrate(20);
-                break;
-            case 'score':
-                navigator.vibrate(50);
-                break;
-            case 'explosion':
-                navigator.vibrate([100, 50, 100, 50, 100]);
-                break;
-            case 'levelup':
-                navigator.vibrate([50, 30, 50]);
-                break;
+    
+    // Browser Vibration API (fallback или для обычных браузеров)
+    if (navigator.vibrate && typeof navigator.vibrate === 'function') {
+        try {
+            switch(type) {
+                case 'tap':
+                case 'jump':
+                    navigator.vibrate(50); // Увеличено с 30 до 50
+                    vibrated = true;
+                    console.log('✅ Browser вибрация: 50ms');
+                    break;
+                case 'score':
+                    navigator.vibrate(80); // Увеличено с 60 до 80
+                    vibrated = true;
+                    console.log('✅ Browser вибрация: 80ms');
+                    break;
+                case 'explosion':
+                    navigator.vibrate([150, 50, 150, 50, 150]); // Увеличено
+                    vibrated = true;
+                    console.log('✅ Browser вибрация: explosion pattern');
+                    break;
+                case 'levelup':
+                    navigator.vibrate([80, 40, 80]); // Увеличено
+                    vibrated = true;
+                    console.log('✅ Browser вибрация: levelup pattern');
+                    break;
+            }
+        } catch (error) {
+            console.warn('❌ Vibration API error:', error);
         }
+    }
+    
+    // Для отладки
+    if (!vibrated) {
+        console.warn('⚠️ Вибрация не доступна! tg:', !!tg, 'HapticFeedback:', !!tg?.HapticFeedback, 'navigator.vibrate:', !!navigator.vibrate);
     }
 }
 
@@ -753,7 +785,7 @@ function jump() {
     if (gameState === 'playing') {
         plane.velocity = plane.jumpPower;
         playSound('jump');
-        vibrate('jump');
+        // Вибрация уже вызвана в обработчике события
     }
 }
 
@@ -899,17 +931,22 @@ function initGame() {
     }
     
     if (canvas) {
-        canvas.addEventListener('click', () => {
+        canvas.addEventListener('click', (e) => {
+            e.preventDefault();
             vibrate('tap');
             initAudio();
-            jump();
+            if (gameState === 'playing') {
+                jump();
+            }
         });
         
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             vibrate('tap');
             initAudio();
-            jump();
+            if (gameState === 'playing') {
+                jump();
+            }
         });
     } else {
         console.error('Canvas не найден!');
@@ -921,7 +958,9 @@ function initGame() {
             e.preventDefault();
             vibrate('tap');
             initAudio();
-            jump();
+            if (gameState === 'playing') {
+                jump();
+            }
         }
     });
     
