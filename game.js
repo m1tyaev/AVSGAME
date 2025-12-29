@@ -2,76 +2,67 @@
 const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
-// Инициализация Supabase с обработкой ошибок (не блокирует запуск игры)
-let supabaseClient;
-function initSupabase() {
-    try {
-        if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log('✅ Supabase инициализирован');
-        } else {
-            throw new Error('Supabase not loaded');
-        }
-    } catch (error) {
-        console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
-        // Создаем заглушку для Supabase
-        supabaseClient = {
-            from: () => ({
-                select: () => Promise.resolve({ data: [], error: null }),
-                insert: () => Promise.resolve({ error: null }),
-                update: () => Promise.resolve({ error: null }),
-                eq: function() { return this; },
-                order: function() { return this; },
-                limit: function() { return this; },
-                single: function() { return Promise.resolve({ data: null, error: null }); }
-            })
-        };
-    }
-}
-
-// Инициализируем Supabase с задержкой, чтобы не блокировать основной код
-setTimeout(initSupabase, 100);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
 if (tg) {
-    try {
-        tg.ready();
-        tg.expand();
-        // Настраиваем цвета для Telegram WebView
-        tg.setHeaderColor('#0a0e27');
-        tg.setBackgroundColor('#0a0e27');
-    } catch (error) {
-        console.warn('Telegram WebApp инициализация:', error);
-    }
+    tg.ready();
+    tg.expand();
 }
 
 // ==================== DOM ELEMENTS ====================
-let canvas, ctx, startScreen, gameOverScreen, startButton, restartButton;
-let scoreDisplay, finalScoreDisplay, levelDisplay, bestScoreDisplay;
-let playerNameInput, newHighScoreDiv, startLeaderboardList, gameOverLeaderboardList;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const startButton = document.getElementById('startButton');
+const restartButton = document.getElementById('restartButton');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const finalScoreDisplay = document.getElementById('finalScore');
+const levelDisplay = document.getElementById('levelDisplay');
+const bestScoreDisplay = document.getElementById('bestScore');
+const playerNameInput = document.getElementById('playerName');
+const newHighScoreDiv = document.getElementById('newHighScore');
+const startLeaderboardList = document.getElementById('startLeaderboardList');
+const gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
 
-function initDOMElements() {
-    canvas = document.getElementById('gameCanvas');
-    if (!canvas) {
-        console.error('Canvas не найден!');
-        return false;
+// ==================== VIBRATION ====================
+function vibrate(type) {
+    // Telegram haptic feedback (лучше работает в Telegram)
+    if (tg?.HapticFeedback) {
+        switch(type) {
+            case 'jump':
+                tg.HapticFeedback.impactOccurred('light');
+                break;
+            case 'score':
+                tg.HapticFeedback.impactOccurred('medium');
+                break;
+            case 'explosion':
+                tg.HapticFeedback.impactOccurred('heavy');
+                break;
+            case 'levelup':
+                tg.HapticFeedback.notificationOccurred('success');
+                break;
+        }
     }
-    ctx = canvas.getContext('2d');
-    startScreen = document.getElementById('startScreen');
-    gameOverScreen = document.getElementById('gameOverScreen');
-    startButton = document.getElementById('startButton');
-    restartButton = document.getElementById('restartButton');
-    scoreDisplay = document.getElementById('scoreDisplay');
-    finalScoreDisplay = document.getElementById('finalScore');
-    levelDisplay = document.getElementById('levelDisplay');
-    bestScoreDisplay = document.getElementById('bestScore');
-    playerNameInput = document.getElementById('playerName');
-    newHighScoreDiv = document.getElementById('newHighScore');
-    startLeaderboardList = document.getElementById('startLeaderboardList');
-    gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
-    
-    return canvas && ctx;
+    // Browser Vibration API (для обычных браузеров)
+    else if (navigator.vibrate) {
+        switch(type) {
+            case 'jump':
+                navigator.vibrate(30);
+                break;
+            case 'score':
+                navigator.vibrate(50);
+                break;
+            case 'explosion':
+                navigator.vibrate([100, 50, 100, 50, 100]);
+                break;
+            case 'levelup':
+                navigator.vibrate([50, 30, 50]);
+                break;
+        }
+    }
 }
 
 // ==================== AUDIO ====================
@@ -133,19 +124,17 @@ function playSound(type) {
 
 // ==================== CANVAS SETUP ====================
 function resizeCanvas() {
-    if (canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        // Инициализируем звезды и облака при изменении размера
-        if (typeof initStars === 'function') initStars();
-        if (typeof initClouds === 'function') initClouds();
-    }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ==================== GAME VARIABLES ====================
 let gameState = 'start';
 let score = 0;
-let bestScore = parseInt(localStorage.getItem('bestScore') || '0', 10);
+let bestScore = localStorage.getItem('bestScore') || 0;
 let playerName = localStorage.getItem('playerName') || '';
 let frameCount = 0;
 let level = 1;
@@ -217,15 +206,13 @@ function initClouds() {
     }
 }
 
-// initStars() и initClouds() будут вызваны после инициализации canvas
+initStars();
+initClouds();
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
-    if (!supabaseClient) {
-        return [];
-    }
     try {
-        const { data, error } = await supabaseClient
+        const { data, error } = await supabase
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
@@ -244,13 +231,9 @@ async function loadLeaderboard() {
 }
 
 async function saveScore(name, newScore) {
-    if (!supabaseClient) {
-        console.warn('Supabase не инициализирован, счёт не сохранён');
-        return;
-    }
     try {
         // Check if player exists
-        const { data: existing } = await supabaseClient
+        const { data: existing } = await supabase
             .from('leaderboard')
             .select('*')
             .eq('name', name)
@@ -259,14 +242,14 @@ async function saveScore(name, newScore) {
         if (existing) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                await supabaseClient
+                await supabase
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
             }
         } else {
             // Add new player
-            await supabaseClient
+            await supabase
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
         }
@@ -614,6 +597,7 @@ function updateDifficulty() {
     if (newLevel > level) {
         level = newLevel;
         playSound('levelup');
+        vibrate('levelup');
         levelDisplay.textContent = 'Уровень: ' + level;
         levelDisplay.classList.add('level-up');
         setTimeout(() => levelDisplay.classList.remove('level-up'), 500);
@@ -655,6 +639,7 @@ function updateObstacles() {
             score++;
             scoreDisplay.textContent = score;
             playSound('score');
+            vibrate('score');
             updateDifficulty();
         }
         
@@ -695,73 +680,47 @@ function jump() {
     if (gameState === 'playing') {
         plane.velocity = plane.jumpPower;
         playSound('jump');
+        vibrate('jump');
     }
 }
 
 function startGame() {
-    console.log('startGame вызвана, gameState:', gameState);
+    initAudio();
     
-    if (!canvas || !ctx) {
-        console.error('Canvas not initialized!');
-        alert('Ошибка: Canvas не инициализирован. Перезагрузите страницу.');
-        return;
-    }
+    // Get player name
+    playerName = playerNameInput.value.trim() || 'Пилот';
+    localStorage.setItem('playerName', playerName);
     
-    try {
-        initAudio();
-        
-        // Get player name
-        if (playerNameInput) {
-            playerName = playerNameInput.value.trim() || 'Пилот';
-            localStorage.setItem('playerName', playerName);
-        } else {
-            playerName = localStorage.getItem('playerName') || 'Пилот';
-        }
-        
-        gameState = 'playing';
-        score = 0;
-        level = 1;
-        frameCount = 0;
-        obstacles.length = 0;
-        particles.length = 0;
-        obstacleSpawnTimer = 0;
-        explosionTimer = 0;
-        
-        currentSpeed = difficulty.baseSpeed;
-        currentGap = difficulty.baseGap;
-        
-        plane.x = canvas.width * 0.15;
-        plane.y = canvas.height / 2;
-        plane.velocity = 0;
-        plane.rotation = 0;
-        
-        if (startScreen) {
-            startScreen.classList.add('hidden');
-            console.log('Стартовый экран скрыт');
-        }
-        if (gameOverScreen) {
-            gameOverScreen.classList.add('hidden');
-        }
-        if (scoreDisplay) {
-            scoreDisplay.classList.remove('hidden');
-            scoreDisplay.textContent = '0';
-        }
-        if (levelDisplay) {
-            levelDisplay.classList.remove('hidden');
-            levelDisplay.textContent = 'Уровень: 1';
-        }
-        
-        console.log('Игра запущена успешно!');
-    } catch (error) {
-        console.error('Ошибка при запуске игры:', error);
-        alert('Ошибка при запуске игры: ' + error.message);
-    }
+    gameState = 'playing';
+    score = 0;
+    level = 1;
+    frameCount = 0;
+    obstacles.length = 0;
+    particles.length = 0;
+    obstacleSpawnTimer = 0;
+    explosionTimer = 0;
+    
+    currentSpeed = difficulty.baseSpeed;
+    currentGap = difficulty.baseGap;
+    
+    plane.x = canvas.width * 0.15;
+    plane.y = canvas.height / 2;
+    plane.velocity = 0;
+    plane.rotation = 0;
+    
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    scoreDisplay.classList.remove('hidden');
+    levelDisplay.classList.remove('hidden');
+    scoreDisplay.textContent = '0';
+    levelDisplay.textContent = 'Уровень: 1';
 }
 
 function triggerGameOver() {
     if (gameState === 'playing') {
         gameState = 'exploding';
         playSound('explosion');
+        vibrate('explosion');
         createExplosion(plane.x + plane.width / 2, plane.y + plane.height / 2);
         explosionTimer = 0;
     }
@@ -773,28 +732,22 @@ async function gameOver() {
     const isNewRecord = score > bestScore;
     if (isNewRecord) {
         bestScore = score;
-        localStorage.setItem('bestScore', bestScore.toString());
-        if (newHighScoreDiv) newHighScoreDiv.classList.remove('hidden');
+        localStorage.setItem('bestScore', bestScore);
+        newHighScoreDiv.classList.remove('hidden');
     } else {
-        if (newHighScoreDiv) newHighScoreDiv.classList.add('hidden');
+        newHighScoreDiv.classList.add('hidden');
     }
     
-    if (finalScoreDisplay) finalScoreDisplay.textContent = score;
-    if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore;
-    if (gameOverScreen) gameOverScreen.classList.remove('hidden');
-    if (scoreDisplay) scoreDisplay.classList.add('hidden');
-    if (levelDisplay) levelDisplay.classList.add('hidden');
+    finalScoreDisplay.textContent = score;
+    bestScoreDisplay.textContent = bestScore;
+    gameOverScreen.classList.remove('hidden');
+    scoreDisplay.classList.add('hidden');
+    levelDisplay.classList.add('hidden');
     
     // Save to Supabase
-    if (playerName && score > 0 && typeof saveScore === 'function') {
-        try {
-            await saveScore(playerName, score);
-            if (typeof updateLeaderboards === 'function') {
-                await updateLeaderboards();
-            }
-        } catch (error) {
-            console.warn('Error saving score:', error);
-        }
+    if (playerName && score > 0) {
+        await saveScore(playerName, score);
+        await updateLeaderboards();
     }
     
     if (tg) {
@@ -828,110 +781,36 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ИГРЫ ====================
-function initGame() {
-    // Инициализируем DOM элементы
-    if (!initDOMElements()) {
-        console.error('Не удалось инициализировать DOM элементы!');
-        return;
+// ==================== EVENT LISTENERS ====================
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+
+canvas.addEventListener('click', () => {
+    initAudio();
+    jump();
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    initAudio();
+    jump();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        initAudio();
+        jump();
     }
-    
-    // Инициализируем canvas
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Привязываем обработчики событий
-    if (startButton) {
-        startButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Кнопка "Начать игру" нажата');
-            startGame();
-        });
-        // Дополнительная обработка для touch событий
-        startButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Кнопка "Начать игру" (touch) нажата');
-            startGame();
-        });
-    } else {
-        console.error('startButton не найден!');
-    }
-    
-    if (restartButton) {
-        restartButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Кнопка "Играть снова" нажата');
-            startGame();
-        });
-        // Дополнительная обработка для touch событий
-        restartButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Кнопка "Играть снова" (touch) нажата');
-            startGame();
-        });
-    } else {
-        console.error('restartButton не найден!');
-    }
-    
-    if (canvas) {
-        canvas.addEventListener('click', () => {
-            initAudio();
-            jump();
-        });
-        
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            initAudio();
-            jump();
-        });
-    } else {
-        console.error('Canvas не найден!');
-        return;
-    }
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space') {
-            e.preventDefault();
-            initAudio();
-            jump();
-        }
-    });
-    
-    // Загружаем сохраненное имя
-    if (playerNameInput) {
-        if (playerName) {
-            playerNameInput.value = playerName;
-        }
-    }
-    
-    // Загружаем таблицу лидеров (с задержкой для загрузки Supabase)
-    setTimeout(() => {
-        try {
-            if (typeof updateLeaderboards === 'function') {
-                updateLeaderboards();
-            }
-        } catch (error) {
-            console.warn('Ошибка загрузки таблицы лидеров:', error);
-        }
-    }, 1000);
-    
-    // Запускаем игровой цикл
-    try {
-        gameLoop();
-        console.log('✅ Игра инициализирована успешно!');
-    } catch (error) {
-        console.error('❌ Ошибка запуска игры:', error);
-    }
+});
+
+// Load saved name
+if (playerName) {
+    playerNameInput.value = playerName;
 }
 
-// Запускаем инициализацию после загрузки DOM
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGame);
-} else {
-    // DOM уже загружен
-    initGame();
-}
+// Initial leaderboard load
+updateLeaderboards();
+
+// Start game loop
+gameLoop();
