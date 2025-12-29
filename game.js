@@ -2,39 +2,7 @@
 const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
-// Безопасная инициализация Supabase
-let supabaseClient;
-let supabaseInitialized = false;
-
-function initSupabase() {
-    try {
-        if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            supabaseInitialized = true;
-            console.log('✅ Supabase инициализирован');
-        } else {
-            throw new Error('Supabase not loaded');
-        }
-    } catch (error) {
-        console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
-        // Создаем заглушку
-        supabaseClient = {
-            from: () => ({
-                select: () => Promise.resolve({ data: [], error: null }),
-                insert: () => Promise.resolve({ error: null }),
-                update: () => Promise.resolve({ error: null }),
-                eq: function() { return this; },
-                order: function() { return this; },
-                limit: function() { return this; },
-                single: function() { return Promise.resolve({ data: null, error: null }); }
-            })
-        };
-        supabaseInitialized = false;
-    }
-}
-
-// Инициализируем Supabase с задержкой, чтобы библиотека успела загрузиться
-setTimeout(initSupabase, 200);
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
@@ -43,73 +11,46 @@ if (tg) {
     tg.expand();
 }
 
-// ==================== VIBRATION ====================
-function vibrate(type = 'tap') {
-    // Telegram haptic feedback (лучше работает в Telegram)
-    if (tg?.HapticFeedback) {
-        switch(type) {
-            case 'tap':
-            case 'jump':
-                tg.HapticFeedback.impactOccurred('light');
-                break;
-            case 'score':
-                tg.HapticFeedback.impactOccurred('medium');
-                break;
-            case 'explosion':
-                tg.HapticFeedback.impactOccurred('heavy');
-                break;
-            case 'levelup':
-                tg.HapticFeedback.notificationOccurred('success');
-                break;
+// Получаем данные пользователя из Telegram
+function getTelegramUserName() {
+    if (!tg) return null;
+    
+    try {
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            // Используем полное имя или username
+            if (user.first_name) {
+                let fullName = user.first_name;
+                if (user.last_name) {
+                    fullName += ' ' + user.last_name;
+                }
+                return fullName;
+            } else if (user.username) {
+                return user.username;
+            }
         }
+    } catch (error) {
+        console.warn('Ошибка получения данных пользователя Telegram:', error);
     }
-    // Browser Vibration API (для обычных браузеров)
-    else if (navigator.vibrate) {
-        switch(type) {
-            case 'tap':
-            case 'jump':
-                navigator.vibrate(20);
-                break;
-            case 'score':
-                navigator.vibrate(50);
-                break;
-            case 'explosion':
-                navigator.vibrate([100, 50, 100, 50, 100]);
-                break;
-            case 'levelup':
-                navigator.vibrate([50, 30, 50]);
-                break;
-        }
-    }
+    
+    return null;
 }
 
 // ==================== DOM ELEMENTS ====================
-let canvas, ctx, startScreen, gameOverScreen, startButton, restartButton;
-let scoreDisplay, finalScoreDisplay, levelDisplay, bestScoreDisplay;
-let playerNameInput, newHighScoreDiv, startLeaderboardList, gameOverLeaderboardList;
-
-function initDOMElements() {
-    canvas = document.getElementById('gameCanvas');
-    if (!canvas) {
-        console.error('Canvas не найден!');
-        return false;
-    }
-    ctx = canvas.getContext('2d');
-    startScreen = document.getElementById('startScreen');
-    gameOverScreen = document.getElementById('gameOverScreen');
-    startButton = document.getElementById('startButton');
-    restartButton = document.getElementById('restartButton');
-    scoreDisplay = document.getElementById('scoreDisplay');
-    finalScoreDisplay = document.getElementById('finalScore');
-    levelDisplay = document.getElementById('levelDisplay');
-    bestScoreDisplay = document.getElementById('bestScore');
-    playerNameInput = document.getElementById('playerName');
-    newHighScoreDiv = document.getElementById('newHighScore');
-    startLeaderboardList = document.getElementById('startLeaderboardList');
-    gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
-    
-    return canvas && ctx;
-}
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const startButton = document.getElementById('startButton');
+const restartButton = document.getElementById('restartButton');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const finalScoreDisplay = document.getElementById('finalScore');
+const levelDisplay = document.getElementById('levelDisplay');
+const bestScoreDisplay = document.getElementById('bestScore');
+const playerNameInput = document.getElementById('playerName');
+const newHighScoreDiv = document.getElementById('newHighScore');
+const startLeaderboardList = document.getElementById('startLeaderboardList');
+const gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
 
 // ==================== AUDIO ====================
 let audioContext;
@@ -170,20 +111,19 @@ function playSound(type) {
 
 // ==================== CANVAS SETUP ====================
 function resizeCanvas() {
-    if (canvas) {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        // Переинициализируем звезды и облака при изменении размера
-        if (typeof initStars === 'function') initStars();
-        if (typeof initClouds === 'function') initClouds();
-    }
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ==================== GAME VARIABLES ====================
 let gameState = 'start';
 let score = 0;
 let bestScore = localStorage.getItem('bestScore') || 0;
-let playerName = localStorage.getItem('playerName') || '';
+// Получаем имя из Telegram или из localStorage
+let playerName = getTelegramUserName() || localStorage.getItem('playerName') || '';
 let frameCount = 0;
 let level = 1;
 
@@ -254,94 +194,55 @@ function initClouds() {
     }
 }
 
-// initStars() и initClouds() будут вызваны после инициализации canvas
+initStars();
+initClouds();
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
-    // Проверяем, что supabaseClient инициализирован и это не заглушка
-    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
-        return [];
-    }
-    
     try {
-        const result = await supabaseClient
+        const { data, error } = await supabase
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
             .limit(10);
         
-        // Проверяем результат
-        if (!result) {
-            return [];
-        }
-        
-        const { data, error } = result;
-        
         if (error) {
-            console.warn('Error loading leaderboard:', error);
+            console.error('Error loading leaderboard:', error);
             return [];
         }
         
-        return Array.isArray(data) ? data : [];
+        return data || [];
     } catch (error) {
-        console.warn('Error loading leaderboard (catch):', error);
+        console.error('Error loading leaderboard:', error);
         return [];
     }
 }
 
 async function saveScore(name, newScore) {
-    // Проверяем, что supabaseClient инициализирован и это не заглушка
-    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
-        return;
-    }
-    
-    if (!name || !newScore || newScore <= 0) {
-        return;
-    }
-    
     try {
         // Check if player exists
-        const existingResult = await supabaseClient
+        const { data: existing } = await supabase
             .from('leaderboard')
             .select('*')
             .eq('name', name)
             .single();
         
-        if (!existingResult) {
-            return;
-        }
-        
-        const { data: existing, error: selectError } = existingResult;
-        
-        if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.warn('Error checking existing player:', selectError);
-            return;
-        }
-        
-        if (existing && existing.score) {
+        if (existing) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                const updateResult = await supabaseClient
+                await supabase
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
-                
-                if (updateResult && updateResult.error) {
-                    console.warn('Error updating score:', updateResult.error);
-                }
             }
         } else {
             // Add new player
-            const insertResult = await supabaseClient
+            await supabase
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
-            
-            if (insertResult && insertResult.error) {
-                console.warn('Error inserting score:', insertResult.error);
-            }
         }
     } catch (error) {
-        console.warn('Error saving score (catch):', error);
+        console.error('Error saving score:', error);
     }
 }
 
@@ -373,17 +274,9 @@ function renderLeaderboard(container, leaders, currentPlayerName) {
 }
 
 async function updateLeaderboards() {
-    try {
-        const leaders = await loadLeaderboard();
-        if (startLeaderboardList) {
-            renderLeaderboard(startLeaderboardList, leaders, playerName);
-        }
-        if (gameOverLeaderboardList) {
-            renderLeaderboard(gameOverLeaderboardList, leaders, playerName);
-        }
-    } catch (error) {
-        console.warn('Error updating leaderboards:', error);
-    }
+    const leaders = await loadLeaderboard();
+    renderLeaderboard(startLeaderboardList, leaders, playerName);
+    renderLeaderboard(gameOverLeaderboardList, leaders, playerName);
 }
 
 // ==================== EXPLOSION ====================
@@ -692,7 +585,6 @@ function updateDifficulty() {
     if (newLevel > level) {
         level = newLevel;
         playSound('levelup');
-        vibrate('levelup');
         levelDisplay.textContent = 'Уровень: ' + level;
         levelDisplay.classList.add('level-up');
         setTimeout(() => levelDisplay.classList.remove('level-up'), 500);
@@ -734,7 +626,6 @@ function updateObstacles() {
             score++;
             scoreDisplay.textContent = score;
             playSound('score');
-            vibrate('score');
             updateDifficulty();
         }
         
@@ -775,16 +666,27 @@ function jump() {
     if (gameState === 'playing') {
         plane.velocity = plane.jumpPower;
         playSound('jump');
-        vibrate('jump');
     }
 }
 
 function startGame() {
     initAudio();
     
-    // Get player name
-    playerName = playerNameInput.value.trim() || 'Пилот';
-    localStorage.setItem('playerName', playerName);
+    // Get player name (из Telegram или из поля ввода)
+    if (tg && getTelegramUserName()) {
+        // Если в Telegram, используем имя из аккаунта
+        playerName = getTelegramUserName();
+    } else if (playerNameInput) {
+        // Иначе используем введенное имя
+        playerName = playerNameInput.value.trim() || 'Пилот';
+    } else {
+        playerName = playerName || 'Пилот';
+    }
+    
+    // Сохраняем в localStorage для использования вне Telegram
+    if (playerName) {
+        localStorage.setItem('playerName', playerName);
+    }
     
     gameState = 'playing';
     score = 0;
@@ -815,7 +717,6 @@ function triggerGameOver() {
     if (gameState === 'playing') {
         gameState = 'exploding';
         playSound('explosion');
-        vibrate('explosion');
         createExplosion(plane.x + plane.width / 2, plane.y + plane.height / 2);
         explosionTimer = 0;
     }
@@ -876,87 +777,47 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// ==================== ИНИЦИАЛИЗАЦИЯ ИГРЫ ====================
-function initGame() {
-    // Инициализируем DOM элементы
-    if (!initDOMElements()) {
-        console.error('Не удалось инициализировать DOM элементы!');
-        return;
+// ==================== EVENT LISTENERS ====================
+startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', startGame);
+
+canvas.addEventListener('click', () => {
+    initAudio();
+    jump();
+});
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    initAudio();
+    jump();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        initAudio();
+        jump();
     }
-    
-    // Инициализируем canvas
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Привязываем обработчики событий
-    if (startButton) {
-        startButton.addEventListener('click', startGame);
-    } else {
-        console.error('startButton не найден!');
+});
+
+// Настраиваем поле ввода имени
+if (tg && getTelegramUserName()) {
+    // Если в Telegram, скрываем поле ввода и показываем имя пользователя
+    const nameInputContainer = document.querySelector('.name-input-container');
+    if (nameInputContainer) {
+        nameInputContainer.innerHTML = `<div style="color: #00d4ff; padding: 12px; text-align: center; border: 2px solid #00d4ff; border-radius: 10px; background: rgba(0, 212, 255, 0.1);">
+            <strong>Игрок:</strong> ${getTelegramUserName()}
+        </div>`;
     }
-    
-    if (restartButton) {
-        restartButton.addEventListener('click', startGame);
-    } else {
-        console.error('restartButton не найден!');
-    }
-    
-    if (canvas) {
-        canvas.addEventListener('click', () => {
-            vibrate('tap');
-            initAudio();
-            jump();
-        });
-        
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            vibrate('tap');
-            initAudio();
-            jump();
-        });
-    } else {
-        console.error('Canvas не найден!');
-        return;
-    }
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.code === 'Space') {
-            e.preventDefault();
-            vibrate('tap');
-            initAudio();
-            jump();
-        }
-    });
-    
-    // Загружаем сохраненное имя
-    if (playerNameInput && playerName) {
+} else if (playerNameInput) {
+    // Если не в Telegram, показываем поле ввода
+    if (playerName) {
         playerNameInput.value = playerName;
-    }
-    
-    // Загружаем таблицу лидеров (с задержкой для загрузки Supabase)
-    setTimeout(() => {
-        try {
-            if (typeof updateLeaderboards === 'function') {
-                updateLeaderboards();
-            }
-        } catch (error) {
-            console.warn('Ошибка загрузки таблицы лидеров:', error);
-        }
-    }, 500);
-    
-    // Запускаем игровой цикл
-    try {
-        gameLoop();
-        console.log('✅ Игра инициализирована успешно!');
-    } catch (error) {
-        console.error('❌ Ошибка запуска игры:', error);
     }
 }
 
-// Запускаем инициализацию после загрузки DOM
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGame);
-} else {
-    // DOM уже загружен
-    initGame();
-}
+// Initial leaderboard load
+updateLeaderboards();
+
+// Start game loop
+gameLoop();
