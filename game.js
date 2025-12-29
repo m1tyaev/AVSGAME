@@ -11,27 +11,12 @@ if (tg) {
     tg.expand();
 }
 
-// ==================== DOM ELEMENTS ====================
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const startScreen = document.getElementById('startScreen');
-const gameOverScreen = document.getElementById('gameOverScreen');
-const startButton = document.getElementById('startButton');
-const restartButton = document.getElementById('restartButton');
-const scoreDisplay = document.getElementById('scoreDisplay');
-const finalScoreDisplay = document.getElementById('finalScore');
-const levelDisplay = document.getElementById('levelDisplay');
-const bestScoreDisplay = document.getElementById('bestScore');
-const playerNameInput = document.getElementById('playerName');
-const newHighScoreDiv = document.getElementById('newHighScore');
-const startLeaderboardList = document.getElementById('startLeaderboardList');
-const gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
-
 // ==================== VIBRATION ====================
-function vibrate(type) {
+function vibrate(type = 'tap') {
     // Telegram haptic feedback (лучше работает в Telegram)
     if (tg?.HapticFeedback) {
         switch(type) {
+            case 'tap':
             case 'jump':
                 tg.HapticFeedback.impactOccurred('light');
                 break;
@@ -49,8 +34,9 @@ function vibrate(type) {
     // Browser Vibration API (для обычных браузеров)
     else if (navigator.vibrate) {
         switch(type) {
+            case 'tap':
             case 'jump':
-                navigator.vibrate(30);
+                navigator.vibrate(20);
                 break;
             case 'score':
                 navigator.vibrate(50);
@@ -64,6 +50,22 @@ function vibrate(type) {
         }
     }
 }
+
+// ==================== DOM ELEMENTS ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const startButton = document.getElementById('startButton');
+const restartButton = document.getElementById('restartButton');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const finalScoreDisplay = document.getElementById('finalScore');
+const levelDisplay = document.getElementById('levelDisplay');
+const bestScoreDisplay = document.getElementById('bestScore');
+const playerNameInput = document.getElementById('playerName');
+const newHighScoreDiv = document.getElementById('newHighScore');
+const startLeaderboardList = document.getElementById('startLeaderboardList');
+const gameOverLeaderboardList = document.getElementById('gameOverLeaderboardList');
 
 // ==================== AUDIO ====================
 let audioContext;
@@ -786,12 +788,14 @@ startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', startGame);
 
 canvas.addEventListener('click', () => {
+    vibrate('tap');
     initAudio();
     jump();
 });
 
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    vibrate('tap');
     initAudio();
     jump();
 });
@@ -799,6 +803,7 @@ canvas.addEventListener('touchstart', (e) => {
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space') {
         e.preventDefault();
+        vibrate('tap');
         initAudio();
         jump();
     }
