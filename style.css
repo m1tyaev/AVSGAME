@@ -17,7 +17,7 @@ body {
     display: block;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(to bottom, #0a0e27 0%, #1a3a5e 50%, #2d5a87 100%);
+    background: linear-gradient(to bottom, #0a1a2e 0%, #1a3a5e 50%, #2d5a87 100%);
     cursor: pointer;
     touch-action: none;
 }
@@ -45,11 +45,11 @@ body {
 .screen-content {
     text-align: center;
     padding: 25px;
-    background: rgba(10, 14, 39, 0.95);
-    border: 2px solid #00d4ff;
+    background: rgba(26, 58, 94, 0.95);
+    border: 2px solid #4A90E2;
     border-radius: 20px;
-    box-shadow: 0 0 30px rgba(0, 212, 255, 0.5),
-                inset 0 0 20px rgba(0, 212, 255, 0.1);
+    box-shadow: 0 0 30px rgba(74, 144, 226, 0.5),
+                inset 0 0 20px rgba(74, 144, 226, 0.1);
     max-width: 90%;
     width: 400px;
     animation: pulse 2s ease-in-out infinite;
@@ -58,20 +58,20 @@ body {
 
 @keyframes pulse {
     0%, 100% {
-        box-shadow: 0 0 30px rgba(0, 212, 255, 0.5),
-                    inset 0 0 20px rgba(0, 212, 255, 0.1);
+        box-shadow: 0 0 30px rgba(74, 144, 226, 0.5),
+                    inset 0 0 20px rgba(74, 144, 226, 0.1);
     }
     50% {
-        box-shadow: 0 0 50px rgba(0, 212, 255, 0.8),
-                    inset 0 0 30px rgba(0, 212, 255, 0.2);
+        box-shadow: 0 0 50px rgba(74, 144, 226, 0.8),
+                    inset 0 0 30px rgba(74, 144, 226, 0.2);
     }
 }
 
 .title {
     font-size: 2.5rem;
-    color: #00d4ff;
-    text-shadow: 0 0 20px rgba(0, 212, 255, 0.8),
-                 0 0 40px rgba(0, 212, 255, 0.5);
+    color: #4A90E2;
+    text-shadow: 0 0 20px rgba(74, 144, 226, 0.8),
+                 0 0 40px rgba(74, 144, 226, 0.5);
     margin-bottom: 15px;
     font-weight: bold;
     letter-spacing: 3px;
@@ -83,9 +83,9 @@ body {
 
 .subtitle {
     font-size: 1.1rem;
-    color: #a0d8ff;
+    color: #87CEEB;
     margin-bottom: 15px;
-    text-shadow: 0 0 10px rgba(160, 216, 255, 0.5);
+    text-shadow: 0 0 10px rgba(135, 206, 235, 0.5);
 }
 
 /* Поле ввода имени */
@@ -98,33 +98,33 @@ body {
     padding: 12px 15px;
     font-size: 1.1rem;
     background: rgba(0, 0, 0, 0.5);
-    border: 2px solid #00d4ff;
+    border: 2px solid #4A90E2;
     border-radius: 10px;
-    color: #00d4ff;
+    color: #4A90E2;
     text-align: center;
     outline: none;
     transition: all 0.3s ease;
 }
 
 .name-input::placeholder {
-    color: rgba(0, 212, 255, 0.5);
+    color: rgba(74, 144, 226, 0.5);
 }
 
 .name-input:focus {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
-    border-color: #ff00ff;
+    box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
+    border-color: #DC143C;
 }
 
 .instructions {
-    background: rgba(0, 212, 255, 0.1);
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: rgba(74, 144, 226, 0.1);
+    border: 1px solid rgba(74, 144, 226, 0.3);
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 20px;
 }
 
 .instructions p {
-    color: #a0d8ff;
+    color: #87CEEB;
     font-size: 0.9rem;
     margin: 5px 0;
 }
@@ -135,28 +135,28 @@ body {
 
 .score-text {
     font-size: 1.4rem;
-    color: #00d4ff;
+    color: #4A90E2;
     margin-bottom: 8px;
-    text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+    text-shadow: 0 0 15px rgba(74, 144, 226, 0.6);
 }
 
 .best-score-text {
     font-size: 1rem;
-    color: #ff00ff;
-    text-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+    color: #DC143C;
+    text-shadow: 0 0 15px rgba(220, 20, 60, 0.6);
 }
 
 #finalScore {
     font-size: 2.2rem;
-    color: #00d4ff;
-    text-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+    color: #4A90E2;
+    text-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
     font-weight: bold;
 }
 
 #bestScore {
     font-size: 1.3rem;
-    color: #ff00ff;
-    text-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+    color: #DC143C;
+    text-shadow: 0 0 20px rgba(220, 20, 60, 0.8);
     font-weight: bold;
 }
 
@@ -184,16 +184,16 @@ body {
 .button {
     padding: 14px 35px;
     font-size: 1.1rem;
-    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
-    color: #000;
-    border: 2px solid #00d4ff;
+    background: linear-gradient(135deg, #4A90E2 0%, #2d5a87 100%);
+    color: #ffffff;
+    border: 2px solid #4A90E2;
     border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: all 0.3s ease;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    box-shadow: 0 0 20px rgba(74, 144, 226, 0.5);
     position: relative;
     overflow: hidden;
 }
@@ -219,7 +219,7 @@ body {
 
 .button:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+    box-shadow: 0 0 30px rgba(74, 144, 226, 0.8);
 }
 
 .button:active {
@@ -230,7 +230,7 @@ body {
 .leaderboard-container {
     margin-top: 20px;
     padding-top: 15px;
-    border-top: 1px solid rgba(0, 212, 255, 0.3);
+    border-top: 1px solid rgba(74, 144, 226, 0.3);
 }
 
 .leaderboard-title {
@@ -251,14 +251,14 @@ body {
     align-items: center;
     padding: 8px 12px;
     margin: 5px 0;
-    background: rgba(0, 212, 255, 0.1);
+    background: rgba(74, 144, 226, 0.1);
     border-radius: 8px;
-    border-left: 3px solid #00d4ff;
+    border-left: 3px solid #4A90E2;
 }
 
 .leaderboard-item.current-player {
-    background: rgba(255, 0, 255, 0.2);
-    border-left-color: #ff00ff;
+    background: rgba(220, 20, 60, 0.2);
+    border-left-color: #DC143C;
 }
 
 .leaderboard-item.top-1 {
@@ -286,7 +286,7 @@ body {
 .leaderboard-name {
     flex: 1;
     text-align: left;
-    color: #a0d8ff;
+    color: #87CEEB;
     font-size: 0.95rem;
     margin-left: 10px;
     overflow: hidden;
@@ -296,13 +296,13 @@ body {
 
 .leaderboard-score {
     font-size: 1rem;
-    color: #00d4ff;
+    color: #4A90E2;
     font-weight: bold;
-    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    text-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
 }
 
 .leaderboard-loading {
-    color: #a0d8ff;
+    color: #87CEEB;
     font-size: 0.9rem;
     padding: 20px;
 }
@@ -314,9 +314,9 @@ body {
     left: 50%;
     transform: translateX(-50%);
     font-size: 3rem;
-    color: #00d4ff;
-    text-shadow: 0 0 20px rgba(0, 212, 255, 0.8),
-                 0 0 40px rgba(0, 212, 255, 0.5);
+    color: #4A90E2;
+    text-shadow: 0 0 20px rgba(74, 144, 226, 0.8),
+                 0 0 40px rgba(74, 144, 226, 0.5);
     font-weight: bold;
     z-index: 5;
     pointer-events: none;
@@ -328,9 +328,9 @@ body {
     top: 30px;
     left: 20px;
     font-size: 1.2rem;
-    color: #ff00ff;
-    text-shadow: 0 0 15px rgba(255, 0, 255, 0.8),
-                 0 0 30px rgba(255, 0, 255, 0.5);
+    color: #DC143C;
+    text-shadow: 0 0 15px rgba(220, 20, 60, 0.8),
+                 0 0 30px rgba(220, 20, 60, 0.5);
     font-weight: bold;
     z-index: 5;
     pointer-events: none;
@@ -360,7 +360,7 @@ body {
 }
 
 .leaderboard-list::-webkit-scrollbar-thumb {
-    background: #00d4ff;
+    background: #4A90E2;
     border-radius: 3px;
 }
 
