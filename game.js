@@ -3,13 +3,13 @@ const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
 // Безопасная инициализация Supabase
-let supabase;
+let supabaseClient;
 let supabaseInitialized = false;
 
 function initSupabase() {
     try {
         if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             supabaseInitialized = true;
             console.log('✅ Supabase инициализирован');
         } else {
@@ -18,7 +18,7 @@ function initSupabase() {
     } catch (error) {
         console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
         // Создаем заглушку
-        supabase = {
+        supabaseClient = {
             from: () => ({
                 select: () => Promise.resolve({ data: [], error: null }),
                 insert: () => Promise.resolve({ error: null }),
@@ -258,13 +258,13 @@ function initClouds() {
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
-    // Проверяем, что supabase инициализирован и это не заглушка
-    if (!supabase || !supabaseInitialized || !supabase.from || typeof supabase.from !== 'function') {
+    // Проверяем, что supabaseClient инициализирован и это не заглушка
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
         return [];
     }
     
     try {
-        const result = await supabase
+        const result = await supabaseClient
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
@@ -290,8 +290,8 @@ async function loadLeaderboard() {
 }
 
 async function saveScore(name, newScore) {
-    // Проверяем, что supabase инициализирован и это не заглушка
-    if (!supabase || !supabaseInitialized || !supabase.from || typeof supabase.from !== 'function') {
+    // Проверяем, что supabaseClient инициализирован и это не заглушка
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
         return;
     }
     
@@ -301,7 +301,7 @@ async function saveScore(name, newScore) {
     
     try {
         // Check if player exists
-        const existingResult = await supabase
+        const existingResult = await supabaseClient
             .from('leaderboard')
             .select('*')
             .eq('name', name)
@@ -321,7 +321,7 @@ async function saveScore(name, newScore) {
         if (existing && existing.score) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                const updateResult = await supabase
+                const updateResult = await supabaseClient
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
@@ -332,7 +332,7 @@ async function saveScore(name, newScore) {
             }
         } else {
             // Add new player
-            const insertResult = await supabase
+            const insertResult = await supabaseClient
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
             
