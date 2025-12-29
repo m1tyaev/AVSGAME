@@ -6,29 +6,61 @@
     <title>AVS Game - Футуристичный полёт</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
     
+    <!-- Стартовый экран -->
     <div id="startScreen" class="screen">
         <div class="screen-content">
             <h1 class="title">AVS GAME</h1>
             <p class="subtitle">Футуристичный полёт</p>
+            
+            <div class="name-input-container">
+                <input type="text" id="playerName" class="name-input" placeholder="Введи своё имя" maxlength="15">
+            </div>
+            
+            <div class="instructions">
+                <p>🎮 Тап / Пробел — взлёт</p>
+                <p>⚡ Скорость растёт с каждым уровнем</p>
+            </div>
+            
             <button id="startButton" class="button">Начать игру</button>
+            
+            <div id="startLeaderboard" class="leaderboard-container">
+                <h3 class="leaderboard-title">🏆 Топ игроков</h3>
+                <div id="startLeaderboardList" class="leaderboard-list"></div>
+            </div>
         </div>
     </div>
     
+    <!-- Экран Game Over -->
     <div id="gameOverScreen" class="screen hidden">
         <div class="screen-content">
-            <h2 class="title">Игра окончена</h2>
-            <p class="score-text">Ваш счёт: <span id="finalScore">0</span></p>
+            <h2 class="title game-over-title">Игра окончена</h2>
+            <div class="score-container">
+                <p class="score-text">Счёт: <span id="finalScore">0</span></p>
+                <p class="best-score-text">Твой рекорд: <span id="bestScore">0</span></p>
+            </div>
+            
+            <div id="newHighScore" class="new-high-score hidden">
+                🎉 Новый рекорд!
+            </div>
+            
             <button id="restartButton" class="button">Играть снова</button>
+            
+            <div id="gameOverLeaderboard" class="leaderboard-container">
+                <h3 class="leaderboard-title">🏆 Топ игроков</h3>
+                <div id="gameOverLeaderboardList" class="leaderboard-list"></div>
+            </div>
         </div>
     </div>
     
+    <!-- Игровые индикаторы -->
     <div id="scoreDisplay" class="score-display hidden">0</div>
+    <div id="levelDisplay" class="level-display hidden">Уровень: 1</div>
     
     <script src="game.js"></script>
 </body>
 </html>
-
