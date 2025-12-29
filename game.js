@@ -2,7 +2,39 @@
 const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Безопасная инициализация Supabase
+let supabaseClient;
+let supabaseInitialized = false;
+
+function initSupabase() {
+    try {
+        if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseInitialized = true;
+            console.log('✅ Supabase инициализирован');
+        } else {
+            throw new Error('Supabase not loaded');
+        }
+    } catch (error) {
+        console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
+        // Создаем заглушку
+        supabaseClient = {
+            from: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+                insert: () => Promise.resolve({ error: null }),
+                update: () => Promise.resolve({ error: null }),
+                eq: function() { return this; },
+                order: function() { return this; },
+                limit: function() { return this; },
+                single: function() { return Promise.resolve({ data: null, error: null }); }
+            })
+        };
+        supabaseInitialized = false;
+    }
+}
+
+// Инициализируем Supabase с задержкой, чтобы библиотека успела загрузиться
+setTimeout(initSupabase, 200);
 
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
