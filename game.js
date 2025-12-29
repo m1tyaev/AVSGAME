@@ -4,27 +4,37 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // Безопасная инициализация Supabase
 let supabase;
-try {
-    if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } else {
-        throw new Error('Supabase not loaded');
+let supabaseInitialized = false;
+
+function initSupabase() {
+    try {
+        if (typeof window.supabase !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseInitialized = true;
+            console.log('✅ Supabase инициализирован');
+        } else {
+            throw new Error('Supabase not loaded');
+        }
+    } catch (error) {
+        console.warn('⚠️ Supabase не загружен, игра будет работать без таблицы лидеров:', error);
+        // Создаем заглушку
+        supabase = {
+            from: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+                insert: () => Promise.resolve({ error: null }),
+                update: () => Promise.resolve({ error: null }),
+                eq: function() { return this; },
+                order: function() { return this; },
+                limit: function() { return this; },
+                single: function() { return Promise.resolve({ data: null, error: null }); }
+            })
+        };
+        supabaseInitialized = false;
     }
-} catch (error) {
-    console.warn('Supabase не загружен, игра будет работать без таблицы лидеров:', error);
-    // Создаем заглушку
-    supabase = {
-        from: () => ({
-            select: () => Promise.resolve({ data: [], error: null }),
-            insert: () => Promise.resolve({ error: null }),
-            update: () => Promise.resolve({ error: null }),
-            eq: function() { return this; },
-            order: function() { return this; },
-            limit: function() { return this; },
-            single: function() { return Promise.resolve({ data: null, error: null }); }
-        })
-    };
 }
+
+// Инициализируем Supabase с задержкой, чтобы библиотека успела загрузиться
+setTimeout(initSupabase, 200);
 
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
@@ -248,50 +258,90 @@ function initClouds() {
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
+    // Проверяем, что supabase инициализирован и это не заглушка
+    if (!supabase || !supabaseInitialized || !supabase.from || typeof supabase.from !== 'function') {
+        return [];
+    }
+    
     try {
-        const { data, error } = await supabase
+        const result = await supabase
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
             .limit(10);
         
-        if (error) {
-            console.error('Error loading leaderboard:', error);
+        // Проверяем результат
+        if (!result) {
             return [];
         }
         
-        return data || [];
+        const { data, error } = result;
+        
+        if (error) {
+            console.warn('Error loading leaderboard:', error);
+            return [];
+        }
+        
+        return Array.isArray(data) ? data : [];
     } catch (error) {
-        console.error('Error loading leaderboard:', error);
+        console.warn('Error loading leaderboard (catch):', error);
         return [];
     }
 }
 
 async function saveScore(name, newScore) {
+    // Проверяем, что supabase инициализирован и это не заглушка
+    if (!supabase || !supabaseInitialized || !supabase.from || typeof supabase.from !== 'function') {
+        return;
+    }
+    
+    if (!name || !newScore || newScore <= 0) {
+        return;
+    }
+    
     try {
         // Check if player exists
-        const { data: existing } = await supabase
+        const existingResult = await supabase
             .from('leaderboard')
             .select('*')
             .eq('name', name)
             .single();
         
-        if (existing) {
+        if (!existingResult) {
+            return;
+        }
+        
+        const { data: existing, error: selectError } = existingResult;
+        
+        if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.warn('Error checking existing player:', selectError);
+            return;
+        }
+        
+        if (existing && existing.score) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                await supabase
+                const updateResult = await supabase
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
+                
+                if (updateResult && updateResult.error) {
+                    console.warn('Error updating score:', updateResult.error);
+                }
             }
         } else {
             // Add new player
-            await supabase
+            const insertResult = await supabase
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
+            
+            if (insertResult && insertResult.error) {
+                console.warn('Error inserting score:', insertResult.error);
+            }
         }
     } catch (error) {
-        console.error('Error saving score:', error);
+        console.warn('Error saving score (catch):', error);
     }
 }
 
@@ -323,9 +373,17 @@ function renderLeaderboard(container, leaders, currentPlayerName) {
 }
 
 async function updateLeaderboards() {
-    const leaders = await loadLeaderboard();
-    renderLeaderboard(startLeaderboardList, leaders, playerName);
-    renderLeaderboard(gameOverLeaderboardList, leaders, playerName);
+    try {
+        const leaders = await loadLeaderboard();
+        if (startLeaderboardList) {
+            renderLeaderboard(startLeaderboardList, leaders, playerName);
+        }
+        if (gameOverLeaderboardList) {
+            renderLeaderboard(gameOverLeaderboardList, leaders, playerName);
+        }
+    } catch (error) {
+        console.warn('Error updating leaderboards:', error);
+    }
 }
 
 // ==================== EXPLOSION ====================
