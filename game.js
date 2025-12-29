@@ -43,6 +43,46 @@ if (tg) {
     tg.expand();
 }
 
+// ==================== VIBRATION ====================
+function vibrate(type = 'tap') {
+    // Telegram haptic feedback (лучше работает в Telegram)
+    if (tg?.HapticFeedback) {
+        switch(type) {
+            case 'tap':
+            case 'jump':
+                tg.HapticFeedback.impactOccurred('light');
+                break;
+            case 'score':
+                tg.HapticFeedback.impactOccurred('medium');
+                break;
+            case 'explosion':
+                tg.HapticFeedback.impactOccurred('heavy');
+                break;
+            case 'levelup':
+                tg.HapticFeedback.notificationOccurred('success');
+                break;
+        }
+    }
+    // Browser Vibration API (для обычных браузеров)
+    else if (navigator.vibrate) {
+        switch(type) {
+            case 'tap':
+            case 'jump':
+                navigator.vibrate(20);
+                break;
+            case 'score':
+                navigator.vibrate(50);
+                break;
+            case 'explosion':
+                navigator.vibrate([100, 50, 100, 50, 100]);
+                break;
+            case 'levelup':
+                navigator.vibrate([50, 30, 50]);
+                break;
+        }
+    }
+}
+
 // Получаем данные пользователя из Telegram
 function getTelegramUserName() {
     if (!tg) return null;
@@ -630,6 +670,7 @@ function updateDifficulty() {
     if (newLevel > level) {
         level = newLevel;
         playSound('levelup');
+        vibrate('levelup');
         levelDisplay.textContent = 'Уровень: ' + level;
         levelDisplay.classList.add('level-up');
         setTimeout(() => levelDisplay.classList.remove('level-up'), 500);
@@ -671,6 +712,7 @@ function updateObstacles() {
             score++;
             scoreDisplay.textContent = score;
             playSound('score');
+            vibrate('score');
             updateDifficulty();
         }
         
@@ -711,6 +753,7 @@ function jump() {
     if (gameState === 'playing') {
         plane.velocity = plane.jumpPower;
         playSound('jump');
+        vibrate('jump');
     }
 }
 
@@ -762,6 +805,7 @@ function triggerGameOver() {
     if (gameState === 'playing') {
         gameState = 'exploding';
         playSound('explosion');
+        vibrate('explosion');
         createExplosion(plane.x + plane.width / 2, plane.y + plane.height / 2);
         explosionTimer = 0;
     }
@@ -856,12 +900,14 @@ function initGame() {
     
     if (canvas) {
         canvas.addEventListener('click', () => {
+            vibrate('tap');
             initAudio();
             jump();
         });
         
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            vibrate('tap');
             initAudio();
             jump();
         });
@@ -873,6 +919,7 @@ function initGame() {
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault();
+            vibrate('tap');
             initAudio();
             jump();
         }
