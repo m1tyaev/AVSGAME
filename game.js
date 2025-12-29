@@ -41,6 +41,9 @@ let tg = window.Telegram?.WebApp;
 if (tg) {
     tg.ready();
     tg.expand();
+    // Настраиваем цвета для Telegram WebView в авиационной палитре
+    tg.setHeaderColor('#1a3a5e');
+    tg.setBackgroundColor('#0a1a2e');
 }
 
 // ==================== VIBRATION ====================
@@ -399,7 +402,7 @@ async function updateLeaderboards() {
 // ==================== EXPLOSION ====================
 function createExplosion(x, y) {
     particles.length = 0;
-    const colors = ['#00d4ff', '#ff00ff', '#ff6600', '#ffff00', '#ffffff'];
+    const colors = ['#4A90E2', '#DC143C', '#FF6600', '#FFD700', '#ffffff'];
     
     for (let i = 0; i < 50; i++) {
         const angle = (Math.PI * 2 / 50) * i + Math.random() * 0.5;
@@ -445,7 +448,7 @@ function updateAndDrawParticles() {
 // ==================== DRAWING FUNCTIONS ====================
 function drawBackground() {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#0a0e27');
+    gradient.addColorStop(0, '#0a1a2e');
     gradient.addColorStop(0.5, '#1a3a5e');
     gradient.addColorStop(1, '#2d5a87');
     
@@ -494,7 +497,7 @@ function drawPlane() {
     
     // Glow effect
     ctx.shadowBlur = 20;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     
     // Main fuselage (Boeing 737 shape)
     ctx.fillStyle = '#c0c8d0';
@@ -542,9 +545,9 @@ function drawPlane() {
     ctx.fill();
     
     // Cockpit windows
-    ctx.fillStyle = '#00d4ff';
+    ctx.fillStyle = '#4A90E2';
     ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     ctx.beginPath();
     ctx.moveTo(w * 0.42, -h * 0.15);
     ctx.lineTo(w * 0.48, -h * 0.1);
@@ -558,7 +561,7 @@ function drawPlane() {
     // Wings
     ctx.fillStyle = '#9098a0';
     ctx.shadowBlur = 5;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     
     // Top wing
     ctx.beginPath();
@@ -605,9 +608,9 @@ function drawPlane() {
     ctx.fill();
     
     // Tail fin
-    ctx.fillStyle = '#00d4ff';
+    ctx.fillStyle = '#4A90E2';
     ctx.shadowBlur = 15;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     ctx.beginPath();
     ctx.moveTo(-w * 0.45, -h * 0.4);
     ctx.lineTo(-w * 0.5, -h * 0.65);
@@ -617,10 +620,10 @@ function drawPlane() {
     ctx.fill();
     
     // Neon accent lines
-    ctx.strokeStyle = '#00d4ff';
+    ctx.strokeStyle = '#4A90E2';
     ctx.lineWidth = 1.5;
     ctx.shadowBlur = 10;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     
     // Stripe along fuselage
     ctx.beginPath();
@@ -637,12 +640,12 @@ function drawObstacle(obstacle) {
         obstacle.x, 0,
         obstacle.x + obstacleWidth, 0
     );
-    glowGradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
-    glowGradient.addColorStop(0.5, 'rgba(0, 212, 255, 0.8)');
-    glowGradient.addColorStop(1, 'rgba(0, 212, 255, 0.3)');
+    glowGradient.addColorStop(0, 'rgba(74, 144, 226, 0.3)');
+    glowGradient.addColorStop(0.5, 'rgba(74, 144, 226, 0.8)');
+    glowGradient.addColorStop(1, 'rgba(74, 144, 226, 0.3)');
     
     ctx.shadowBlur = 20;
-    ctx.shadowColor = '#00d4ff';
+    ctx.shadowColor = '#4A90E2';
     
     ctx.fillStyle = glowGradient;
     ctx.fillRect(obstacle.x, 0, obstacleWidth, obstacle.topHeight);
@@ -653,7 +656,7 @@ function drawObstacle(obstacle) {
         canvas.height - (obstacle.topHeight + currentGap)
     );
     
-    ctx.strokeStyle = '#00d4ff';
+    ctx.strokeStyle = '#4A90E2';
     ctx.lineWidth = 3;
     ctx.shadowBlur = 15;
     
@@ -665,9 +668,9 @@ function drawObstacle(obstacle) {
         canvas.height - (obstacle.topHeight + currentGap)
     );
     
-    ctx.strokeStyle = '#ff00ff';
+    ctx.strokeStyle = '#DC143C';
     ctx.lineWidth = 2;
-    ctx.shadowColor = '#ff00ff';
+    ctx.shadowColor = '#DC143C';
     ctx.shadowBlur = 10;
     
     ctx.beginPath();
@@ -969,7 +972,7 @@ function initGame() {
         // Если в Telegram, скрываем поле ввода и показываем имя пользователя
         const nameInputContainer = document.querySelector('.name-input-container');
         if (nameInputContainer) {
-            nameInputContainer.innerHTML = `<div style="color: #00d4ff; padding: 12px; text-align: center; border: 2px solid #00d4ff; border-radius: 10px; background: rgba(0, 212, 255, 0.1);">
+            nameInputContainer.innerHTML = `<div style="color: #4A90E2; padding: 12px; text-align: center; border: 2px solid #4A90E2; border-radius: 10px; background: rgba(74, 144, 226, 0.1);">
                 <strong>Игрок:</strong> ${getTelegramUserName()}
             </div>`;
         }
