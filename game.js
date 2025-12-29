@@ -38,27 +38,12 @@ if (tg) {
     try {
         tg.ready();
         tg.expand();
-        // Настраиваем WebView
-        tg.enableClosingConfirmation();
-        // Устанавливаем цвет фона
+        // Настраиваем цвета для Telegram WebView
         tg.setHeaderColor('#0a0e27');
         tg.setBackgroundColor('#0a0e27');
     } catch (error) {
         console.warn('Telegram WebApp инициализация:', error);
     }
-}
-
-// Подавляем предупреждения о неподдерживаемых функциях
-if (typeof window.addEventListener === 'function') {
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-        const message = args.join(' ');
-        // Игнорируем предупреждения о device-orientation
-        if (message.includes('device-orientation') || message.includes('Unrecognized feature')) {
-            return;
-        }
-        originalWarn.apply(console, args);
-    };
 }
 
 // ==================== DOM ELEMENTS ====================
