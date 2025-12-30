@@ -778,15 +778,51 @@ function drawClouds() {
 // Дед Мороз (или самолет, если изображение не загружено)
 function drawPlane() {
     ctx.save();
-    ctx.translate(plane.x + plane.width / 2, plane.y + plane.height / 2);
+    
+    // Применяем анимацию покачивания
+    const bobY = Math.sin(plane.bobOffset) * 3; // Покачивание вверх-вниз на 3 пикселя
+    ctx.translate(plane.x + plane.width / 2, plane.y + plane.height / 2 + bobY);
     ctx.rotate(plane.rotation);
     
     // Если изображение Деда Мороза загружено, рисуем его
     if (santaImageLoaded && santaImage && santaImage.complete && santaImage.naturalWidth > 0) {
-        // Рисуем изображение Деда Мороза
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#4A90E2';
-        ctx.drawImage(santaImage, -plane.width / 2, -plane.height / 2, plane.width, plane.height);
+        // Улучшаем четкость изображения
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
+        // Пульсирующее свечение
+        const glowAlpha = 0.6 + Math.sin(plane.glowIntensity) * 0.3;
+        const glowBlur = 20 + Math.sin(plane.glowIntensity) * 10;
+        
+        // Внешнее свечение (более мягкое)
+        ctx.shadowBlur = glowBlur;
+        ctx.shadowColor = `rgba(74, 144, 226, ${glowAlpha})`;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // Рисуем изображение Деда Мороза с улучшенной четкостью
+        ctx.drawImage(
+            santaImage, 
+            -plane.width / 2, 
+            -plane.height / 2, 
+            plane.width, 
+            plane.height
+        );
+        
+        // Дополнительное внутреннее свечение для четкости
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.2;
+        ctx.drawImage(
+            santaImage, 
+            -plane.width / 2, 
+            -plane.height / 2, 
+            plane.width, 
+            plane.height
+        );
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+        
         ctx.restore();
         return;
     }
@@ -1032,7 +1068,20 @@ function updatePlane() {
     
     plane.y += plane.velocity;
     
+    // Плавное вращение в зависимости от скорости
     plane.rotation = Math.max(-0.4, Math.min(0.4, plane.velocity * 0.04));
+    
+    // Обновляем анимацию покачивания
+    plane.bobOffset += plane.bobSpeed;
+    if (plane.bobOffset > Math.PI * 2) {
+        plane.bobOffset -= Math.PI * 2;
+    }
+    
+    // Обновляем пульсацию свечения
+    plane.glowIntensity += plane.glowSpeed;
+    if (plane.glowIntensity > Math.PI * 2) {
+        plane.glowIntensity -= Math.PI * 2;
+    }
     
     if (plane.y < 0) {
         plane.y = 0;
@@ -1188,6 +1237,9 @@ function startGame() {
     plane.y = canvas.height / 2;
     plane.velocity = 0;
     plane.rotation = 0;
+    // Сбрасываем анимацию
+    plane.bobOffset = 0;
+    plane.glowIntensity = 0;
     
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
