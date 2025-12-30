@@ -242,6 +242,9 @@ function resizeCanvas() {
     }
 }
 
+// Загружаем фоновое изображение
+loadBackgroundImage();
+
 // ==================== GAME VARIABLES ====================
 let gameState = 'start'; // 'start', 'playing', 'paused', 'exploding', 'gameover'
 let score = 0;
@@ -265,6 +268,41 @@ const difficulty = {
 
 let currentSpeed = difficulty.baseSpeed;
 let currentGap = difficulty.baseGap;
+
+// Background image
+let backgroundImage = null;
+let backgroundImageLoaded = false;
+
+function loadBackgroundImage() {
+    backgroundImage = new Image();
+    
+    // Пробуем загрузить изображение (поддерживаем разные форматы)
+    const imageNames = ['background.jpg', 'background.png', 'background.webp'];
+    let imageIndex = 0;
+    
+    function tryLoadImage() {
+        if (imageIndex < imageNames.length) {
+            backgroundImage.src = imageNames[imageIndex];
+        }
+    }
+    
+    backgroundImage.onload = function() {
+        backgroundImageLoaded = true;
+        console.log('✅ Фоновое изображение загружено:', imageNames[imageIndex - 1]);
+    };
+    
+    backgroundImage.onerror = function() {
+        imageIndex++;
+        if (imageIndex < imageNames.length) {
+            tryLoadImage();
+        } else {
+            backgroundImageLoaded = false;
+            console.warn('⚠️ Не удалось загрузить фоновое изображение, используется градиент');
+        }
+    };
+    
+    tryLoadImage();
+}
 
 // Plane (Boeing 737)
 const plane = {
@@ -593,13 +631,50 @@ function updateAndDrawParticles() {
 
 // ==================== DRAWING FUNCTIONS ====================
 function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#0a1a2e');
-    gradient.addColorStop(0.5, '#1a3a5e');
-    gradient.addColorStop(1, '#2d5a87');
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (backgroundImageLoaded && backgroundImage) {
+        // Рисуем фоновое изображение с сохранением пропорций
+        const imgAspect = backgroundImage.width / backgroundImage.height;
+        const canvasAspect = canvas.width / canvas.height;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (imgAspect > canvasAspect) {
+            // Изображение шире - подгоняем по высоте
+            drawHeight = canvas.height;
+            drawWidth = drawHeight * imgAspect;
+            drawX = (canvas.width - drawWidth) / 2;
+            drawY = 0;
+        } else {
+            // Изображение выше - подгоняем по ширине
+            drawWidth = canvas.width;
+            drawHeight = drawWidth / imgAspect;
+            drawX = 0;
+            drawY = (canvas.height - drawHeight) / 2;
+        }
+        
+        // Рисуем изображение с эффектом затемнения для лучшей видимости игровых элементов
+        ctx.save();
+        ctx.globalAlpha = 0.85; // Легкое затемнение
+        ctx.drawImage(backgroundImage, drawX, drawY, drawWidth, drawHeight);
+        ctx.restore();
+        
+        // Добавляем легкий градиентный оверлей для лучшей видимости
+        const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        overlay.addColorStop(0, 'rgba(10, 26, 46, 0.2)');
+        overlay.addColorStop(0.5, 'rgba(26, 58, 94, 0.1)');
+        overlay.addColorStop(1, 'rgba(45, 90, 135, 0.2)');
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+        // Fallback на градиент, если изображение не загружено
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#0a1a2e');
+        gradient.addColorStop(0.5, '#1a3a5e');
+        gradient.addColorStop(1, '#2d5a87');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 function drawStars() {
