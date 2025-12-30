@@ -144,7 +144,7 @@ function getTelegramUserName() {
 }
 
 // ==================== DOM ELEMENTS ====================
-let canvas, ctx, startScreen, gameOverScreen, startButton, restartButton;
+let canvas, ctx, startScreen, gameOverScreen, pauseScreen, startButton, restartButton, pauseButton, resumeButton;
 let scoreDisplay, finalScoreDisplay, levelDisplay, bestScoreDisplay;
 let playerNameInput, newHighScoreDiv, startLeaderboardList, gameOverLeaderboardList;
 
@@ -157,8 +157,11 @@ function initDOMElements() {
     ctx = canvas.getContext('2d');
     startScreen = document.getElementById('startScreen');
     gameOverScreen = document.getElementById('gameOverScreen');
+    pauseScreen = document.getElementById('pauseScreen');
     startButton = document.getElementById('startButton');
     restartButton = document.getElementById('restartButton');
+    pauseButton = document.getElementById('pauseButton');
+    resumeButton = document.getElementById('resumeButton');
     scoreDisplay = document.getElementById('scoreDisplay');
     finalScoreDisplay = document.getElementById('finalScore');
     levelDisplay = document.getElementById('levelDisplay');
@@ -240,13 +243,15 @@ function resizeCanvas() {
 }
 
 // ==================== GAME VARIABLES ====================
-let gameState = 'start';
+let gameState = 'start'; // 'start', 'playing', 'paused', 'exploding', 'gameover'
 let score = 0;
 let bestScore = localStorage.getItem('bestScore') || 0;
 // Имя будет получено позже при инициализации
 let playerName = localStorage.getItem('playerName') || '';
 let frameCount = 0;
 let level = 1;
+let gameStartDelay = 60; // Задержка перед началом падения (60 кадров = ~1 секунда)
+let gameStartTimer = 0;
 
 // Difficulty settings
 const difficulty = {
@@ -857,7 +862,20 @@ function updateDifficulty() {
 }
 
 function updatePlane() {
-    plane.velocity += plane.gravity;
+    // В начале игры даем самолету время на старт
+    if (gameStartTimer < gameStartDelay) {
+        gameStartTimer++;
+        // Самолет начинает с небольшой скоростью вверх
+        if (gameStartTimer < gameStartDelay / 2) {
+            plane.velocity = -2; // Легкий подъем
+        } else {
+            plane.velocity = 0; // Нейтральная позиция
+        }
+    } else {
+        // Обычная физика после задержки
+        plane.velocity += plane.gravity;
+    }
+    
     plane.y += plane.velocity;
     
     plane.rotation = Math.max(-0.4, Math.min(0.4, plane.velocity * 0.04));
@@ -927,9 +945,33 @@ function updateClouds() {
 
 function jump() {
     if (gameState === 'playing') {
+        // Если игра только началась, ускоряем старт
+        if (gameStartTimer < gameStartDelay) {
+            gameStartTimer = gameStartDelay; // Пропускаем задержку
+        }
         plane.velocity = plane.jumpPower;
         playSound('jump');
         // Вибрация уже вызвана в обработчике события
+    }
+}
+
+function togglePause() {
+    if (gameState === 'playing') {
+        gameState = 'paused';
+        pauseScreen.classList.remove('hidden');
+        pauseButton.classList.add('hidden');
+    } else if (gameState === 'paused') {
+        gameState = 'playing';
+        pauseScreen.classList.add('hidden');
+        pauseButton.classList.remove('hidden');
+    }
+}
+
+function resumeGame() {
+    if (gameState === 'paused') {
+        gameState = 'playing';
+        pauseScreen.classList.add('hidden');
+        pauseButton.classList.remove('hidden');
     }
 }
 
@@ -963,9 +1005,20 @@ function startGame() {
     particles.length = 0;
     obstacleSpawnTimer = 0;
     explosionTimer = 0;
+    gameStartTimer = 0; // Сбрасываем таймер старта
     
     currentSpeed = difficulty.baseSpeed;
     currentGap = difficulty.baseGap;
+    
+    // Показываем кнопку паузы
+    if (pauseButton) {
+        pauseButton.classList.remove('hidden');
+    }
+    
+    // Скрываем экран паузы если он был открыт
+    if (pauseScreen) {
+        pauseScreen.classList.add('hidden');
+    }
     
     plane.x = canvas.width * 0.15;
     plane.y = canvas.height / 2;
@@ -974,6 +1027,7 @@ function startGame() {
     
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
+    pauseScreen.classList.add('hidden'); // Убеждаемся что экран паузы скрыт
     scoreDisplay.classList.remove('hidden');
     levelDisplay.classList.remove('hidden');
     scoreDisplay.textContent = '0';
@@ -1008,6 +1062,11 @@ async function gameOver() {
     scoreDisplay.classList.add('hidden');
     levelDisplay.classList.add('hidden');
     
+    // Скрываем кнопку паузы при game over
+    if (pauseButton) {
+        pauseButton.classList.add('hidden');
+    }
+    
     // Save to Supabase
     if (playerName && score > 0) {
         await saveScore(playerName, score);
@@ -1032,6 +1091,11 @@ function gameLoop() {
         obstacles.forEach(drawObstacle);
         drawPlane();
         frameCount++;
+    } else if (gameState === 'paused') {
+        // Рисуем игру в замороженном состоянии
+        obstacles.forEach(drawObstacle);
+        drawPlane();
+        // Не обновляем физику
     } else if (gameState === 'exploding') {
         obstacles.forEach(drawObstacle);
         updateAndDrawParticles();
@@ -1075,6 +1139,18 @@ function initGame() {
         restartButton.addEventListener('click', startGame);
     } else {
         console.error('restartButton не найден!');
+    }
+    
+    if (pauseButton) {
+        pauseButton.addEventListener('click', togglePause);
+    } else {
+        console.error('pauseButton не найден!');
+    }
+    
+    if (resumeButton) {
+        resumeButton.addEventListener('click', resumeGame);
+    } else {
+        console.error('resumeButton не найден!');
     }
     
     if (canvas) {
