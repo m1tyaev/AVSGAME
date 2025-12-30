@@ -1335,9 +1335,19 @@ function initGame() {
 }
 
 // Запускаем инициализацию после загрузки DOM
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGame);
-} else {
-    // DOM уже загружен
-    initGame();
-}
+(function() {
+    'use strict';
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initGame === 'function') {
+                initGame();
+            }
+        });
+    } else {
+        // DOM уже загружен
+        if (typeof initGame === 'function') {
+            initGame();
+        }
+    }
+})();
