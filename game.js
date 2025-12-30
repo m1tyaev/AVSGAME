@@ -337,8 +337,12 @@ function loadSantaImage() {
                 santaImage = img;
                 santaImageLoaded = true;
                 // Автоматически подстраиваем размеры под изображение
-                plane.width = Math.min(santaImage.width * 0.4, 100); // Масштабируем для игры
-                plane.height = Math.min(santaImage.height * 0.4, 80);
+                // Увеличиваем в 5 раз (было 0.4, теперь 2.0 = в 5 раз больше)
+                // Используем canvas если доступен, иначе фиксированные размеры
+                const maxWidth = canvas ? Math.min(canvas.width * 0.4, 600) : 600;
+                const maxHeight = canvas ? Math.min(canvas.height * 0.5, 500) : 500;
+                plane.width = Math.min(santaImage.width * 2.0, maxWidth);
+                plane.height = Math.min(santaImage.height * 2.0, maxHeight);
                 console.log('✅ Изображение Деда Мороза загружено:', imageNames[imageIndex]);
                 console.log('📐 Размеры спрайта:', santaImage.width, 'x', santaImage.height);
                 console.log('📐 Размеры в игре:', plane.width, 'x', plane.height);
@@ -368,8 +372,8 @@ loadBackgroundImage();
 const plane = {
     x: 0,
     y: 0,
-    width: 80, // Увеличиваем размер для Деда Мороза
-    height: 60,
+    width: 400, // Увеличиваем размер для Деда Мороза (в 5 раз больше)
+    height: 300,
     velocity: 0,
     gravity: 0.45,
     jumpPower: -7.5,
@@ -577,6 +581,14 @@ async function saveScore(name, newScore) {
     }
 }
 
+// Функция для безопасного экранирования HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function renderLeaderboard(container, leaders, currentPlayerName, playerRank = null, totalPlayers = 0) {
     if (!container) return;
     
@@ -600,24 +612,28 @@ async function renderLeaderboard(container, leaders, currentPlayerName, playerRa
         
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
         const rankDisplay = index < 3 ? medal : `<span class="rank-number">${index + 1}</span>`;
+        const safeName = escapeHtml(leader.name);
+        const safeScore = leader.score.toLocaleString();
         
         return `
             <div class="${itemClass}">
                 <span class="leaderboard-rank">${rankDisplay}</span>
-                <span class="leaderboard-name" title="${leader.name}">${leader.name}</span>
-                <span class="leaderboard-score">${leader.score.toLocaleString()} <span class="score-label">очков</span></span>
+                <span class="leaderboard-name" title="${safeName}">${safeName}</span>
+                <span class="leaderboard-score">${safeScore} <span class="score-label">очков</span></span>
             </div>
         `;
     }).join('');
     
     // Если текущий игрок не в топ-10, показываем его позицию отдельно
     if (currentPlayerInTop === -1 && playerRank && playerRank.rank) {
+        const safeCurrentName = escapeHtml(currentPlayerName);
+        const safeRankScore = playerRank.score.toLocaleString();
         html += `
             <div class="leaderboard-separator"></div>
             <div class="leaderboard-item current-player player-rank-info">
                 <span class="leaderboard-rank"><span class="rank-number">${playerRank.rank}</span></span>
-                <span class="leaderboard-name" title="${currentPlayerName}">${currentPlayerName} <span class="you-label">(Вы)</span></span>
-                <span class="leaderboard-score">${playerRank.score.toLocaleString()} <span class="score-label">очков</span></span>
+                <span class="leaderboard-name" title="${safeCurrentName}">${safeCurrentName} <span class="you-label">(Вы)</span></span>
+                <span class="leaderboard-score">${safeRankScore} <span class="score-label">очков</span></span>
             </div>
         `;
     }
@@ -1332,6 +1348,12 @@ function initGame() {
             if (gameState === 'playing') {
                 jump();
             }
+        } else if (e.code === 'KeyP' || e.code === 'Escape') {
+            // Пауза на P или Escape
+            e.preventDefault();
+            if (gameState === 'playing' || gameState === 'paused') {
+                togglePause();
+            }
         }
     });
     
@@ -1347,8 +1369,9 @@ function initGame() {
         // Скрываем поле ввода и показываем имя пользователя
         const nameInputContainer = document.querySelector('.name-input-container');
         if (nameInputContainer) {
+            const safeName = escapeHtml(currentTelegramName);
             nameInputContainer.innerHTML = `<div style="color: #4A90E2; padding: 12px; text-align: center; border: 2px solid #4A90E2; border-radius: 10px; background: rgba(74, 144, 226, 0.1);">
-                <strong>Игрок:</strong> ${currentTelegramName}
+                <strong>Игрок:</strong> ${safeName}
             </div>`;
         }
         // Скрываем поле ввода если оно есть
