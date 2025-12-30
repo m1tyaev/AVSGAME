@@ -319,62 +319,171 @@ function initClouds() {
 
 // ==================== LEADERBOARD (SUPABASE) ====================
 async function loadLeaderboard() {
+    // Проверяем, что supabaseClient инициализирован и это не заглушка
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
+        return [];
+    }
+    
     try {
-        const { data, error } = await supabase
+        const result = await supabaseClient
             .from('leaderboard')
             .select('*')
             .order('score', { ascending: false })
             .limit(10);
         
-        if (error) {
-            console.error('Error loading leaderboard:', error);
+        // Проверяем результат
+        if (!result) {
             return [];
         }
         
-        return data || [];
+        const { data, error } = result;
+        
+        if (error) {
+            console.warn('Error loading leaderboard:', error);
+            return [];
+        }
+        
+        return Array.isArray(data) ? data : [];
     } catch (error) {
-        console.error('Error loading leaderboard:', error);
+        console.warn('Error loading leaderboard (catch):', error);
         return [];
     }
 }
 
+// Получить позицию игрока в рейтинге
+async function getPlayerRank(playerName) {
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
+        return null;
+    }
+    
+    try {
+        // Получаем все записи, отсортированные по очкам
+        const result = await supabaseClient
+            .from('leaderboard')
+            .select('name, score')
+            .order('score', { ascending: false });
+        
+        if (!result || result.error) {
+            return null;
+        }
+        
+        const { data } = result;
+        if (!Array.isArray(data)) {
+            return null;
+        }
+        
+        // Находим позицию игрока
+        const playerIndex = data.findIndex(player => player.name === playerName);
+        
+        if (playerIndex === -1) {
+            return null; // Игрок не найден
+        }
+        
+        return {
+            rank: playerIndex + 1,
+            totalPlayers: data.length,
+            score: data[playerIndex].score
+        };
+    } catch (error) {
+        console.warn('Error getting player rank:', error);
+        return null;
+    }
+}
+
+// Получить общее количество игроков
+async function getTotalPlayers() {
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
+        return 0;
+    }
+    
+    try {
+        const result = await supabaseClient
+            .from('leaderboard')
+            .select('name', { count: 'exact', head: true });
+        
+        if (!result || result.error) {
+            return 0;
+        }
+        
+        return result.count || 0;
+    } catch (error) {
+        console.warn('Error getting total players:', error);
+        return 0;
+    }
+}
+
 async function saveScore(name, newScore) {
+    // Проверяем, что supabaseClient инициализирован и это не заглушка
+    if (!supabaseClient || !supabaseInitialized || !supabaseClient.from || typeof supabaseClient.from !== 'function') {
+        return;
+    }
+    
+    if (!name || !newScore || newScore <= 0) {
+        return;
+    }
+    
     try {
         // Check if player exists
-        const { data: existing } = await supabase
+        const existingResult = await supabaseClient
             .from('leaderboard')
             .select('*')
             .eq('name', name)
             .single();
         
+        if (!existingResult) {
+            throw new Error('Supabase query failed for existing player check.');
+        }
+
+        const { data: existing, error: existingError } = existingResult;
+
+        if (existingError && existingError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+            throw existingError;
+        }
+        
         if (existing) {
             // Update if new score is higher
             if (newScore > existing.score) {
-                await supabase
+                const updateResult = await supabaseClient
                     .from('leaderboard')
                     .update({ score: newScore })
                     .eq('name', name);
+                
+                if (updateResult.error) {
+                    throw updateResult.error;
+                }
+                console.log('Score updated for', name);
             }
         } else {
             // Add new player
-            await supabase
+            const insertResult = await supabaseClient
                 .from('leaderboard')
                 .insert([{ name: name, score: newScore }]);
+            
+            if (insertResult.error) {
+                throw insertResult.error;
+            }
+            console.log('New player added:', name);
         }
     } catch (error) {
-        console.error('Error saving score:', error);
+        console.warn('Error saving score:', error);
     }
 }
 
-function renderLeaderboard(container, leaders, currentPlayerName) {
+async function renderLeaderboard(container, leaders, currentPlayerName, playerRank = null, totalPlayers = 0) {
     if (!container) return;
     
     if (leaders.length === 0) {
-        container.innerHTML = '<div class="leaderboard-loading">Нет данных</div>';
+        container.innerHTML = '<div class="leaderboard-loading">Загрузка рейтинга...</div>';
         return;
     }
     
-    container.innerHTML = leaders.map((leader, index) => {
+    // Проверяем, есть ли текущий игрок в топ-10
+    const currentPlayerInTop = leaders.findIndex(leader => leader.name === currentPlayerName);
+    
+    let html = '';
+    
+    // Показываем топ игроков
+    html += leaders.map((leader, index) => {
         let itemClass = 'leaderboard-item';
         if (leader.name === currentPlayerName) itemClass += ' current-player';
         if (index === 0) itemClass += ' top-1';
@@ -382,21 +491,53 @@ function renderLeaderboard(container, leaders, currentPlayerName) {
         else if (index === 2) itemClass += ' top-3';
         
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+        const rankDisplay = index < 3 ? medal : `<span class="rank-number">${index + 1}</span>`;
         
         return `
             <div class="${itemClass}">
-                <span class="leaderboard-rank">${medal}</span>
-                <span class="leaderboard-name">${leader.name}</span>
-                <span class="leaderboard-score">${leader.score}</span>
+                <span class="leaderboard-rank">${rankDisplay}</span>
+                <span class="leaderboard-name" title="${leader.name}">${leader.name}</span>
+                <span class="leaderboard-score">${leader.score.toLocaleString()} <span class="score-label">очков</span></span>
             </div>
         `;
     }).join('');
+    
+    // Если текущий игрок не в топ-10, показываем его позицию отдельно
+    if (currentPlayerInTop === -1 && playerRank && playerRank.rank) {
+        html += `
+            <div class="leaderboard-separator"></div>
+            <div class="leaderboard-item current-player player-rank-info">
+                <span class="leaderboard-rank"><span class="rank-number">${playerRank.rank}</span></span>
+                <span class="leaderboard-name" title="${currentPlayerName}">${currentPlayerName} <span class="you-label">(Вы)</span></span>
+                <span class="leaderboard-score">${playerRank.score.toLocaleString()} <span class="score-label">очков</span></span>
+            </div>
+        `;
+    }
+    
+    // Показываем общую статистику
+    if (totalPlayers > 0) {
+        html += `
+            <div class="leaderboard-stats">
+                <div class="stats-item">Всего игроков: <strong>${totalPlayers}</strong></div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
 }
 
 async function updateLeaderboards() {
+    if (!startLeaderboardList || !gameOverLeaderboardList) {
+        console.warn('Leaderboard DOM elements not found.');
+        return;
+    }
+    
     const leaders = await loadLeaderboard();
-    renderLeaderboard(startLeaderboardList, leaders, playerName);
-    renderLeaderboard(gameOverLeaderboardList, leaders, playerName);
+    const playerRank = playerName ? await getPlayerRank(playerName) : null;
+    const totalPlayers = await getTotalPlayers();
+    
+    await renderLeaderboard(startLeaderboardList, leaders, playerName, playerRank, totalPlayers);
+    await renderLeaderboard(gameOverLeaderboardList, leaders, playerName, playerRank, totalPlayers);
 }
 
 // ==================== EXPLOSION ====================
@@ -811,6 +952,9 @@ function startGame() {
         localStorage.setItem('playerName', playerName);
     }
     
+    // Обновляем leaderboard перед началом игры
+    updateLeaderboards();
+    
     gameState = 'playing';
     score = 0;
     level = 1;
@@ -993,6 +1137,13 @@ function initGame() {
             console.warn('Ошибка загрузки таблицы лидеров:', error);
         }
     }, 1000);
+    
+    // Периодически обновляем leaderboard на стартовом экране (каждые 10 секунд)
+    setInterval(() => {
+        if (gameState === 'start' && typeof updateLeaderboards === 'function') {
+            updateLeaderboards();
+        }
+    }, 10000);
     
     // Запускаем игровой цикл
     try {
