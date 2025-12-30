@@ -278,6 +278,10 @@ let currentGap = difficulty.baseGap;
 let backgroundImage = null;
 let backgroundImageLoaded = false;
 
+// Santa/Plane sprite image
+let santaImage = null;
+let santaImageLoaded = false;
+
 function loadBackgroundImage() {
     if (!backgroundImage) {
         backgroundImage = new Image();
@@ -317,20 +321,65 @@ function loadBackgroundImage() {
     tryLoadImage();
 }
 
+function loadSantaImage() {
+    if (!santaImage) {
+        santaImage = new Image();
+    }
+    
+    const imageNames = ['santa.png', 'santa.jpg', 'ded-moroz.png'];
+    let imageIndex = 0;
+    
+    function tryLoadSanta() {
+        if (imageIndex < imageNames.length) {
+            const imagePath = imageNames[imageIndex];
+            const img = new Image();
+            img.onload = function() {
+                santaImage = img;
+                santaImageLoaded = true;
+                // Автоматически подстраиваем размеры под изображение
+                plane.width = Math.min(santaImage.width * 0.4, 100); // Масштабируем для игры
+                plane.height = Math.min(santaImage.height * 0.4, 80);
+                console.log('✅ Изображение Деда Мороза загружено:', imageNames[imageIndex]);
+                console.log('📐 Размеры спрайта:', santaImage.width, 'x', santaImage.height);
+                console.log('📐 Размеры в игре:', plane.width, 'x', plane.height);
+            };
+            img.onerror = function() {
+                console.warn('❌ Не удалось загрузить:', imageNames[imageIndex]);
+                imageIndex++;
+                if (imageIndex < imageNames.length) {
+                    tryLoadSanta();
+                } else {
+                    santaImageLoaded = false;
+                    console.warn('⚠️ Не удалось загрузить изображение Деда Мороза, используется векторный самолет');
+                }
+            };
+            img.src = imagePath;
+            console.log('🔄 Пытаемся загрузить Дед Мороз:', imagePath);
+        }
+    }
+    
+    tryLoadSanta();
+}
+
 // Загружаем фоновое изображение после объявления переменных
 loadBackgroundImage();
 
-// Plane (Boeing 737)
+// Plane/Santa (теперь это Дед Мороз)
 const plane = {
     x: 0,
     y: 0,
-    width: 70,
-    height: 25,
+    width: 80, // Увеличиваем размер для Деда Мороза
+    height: 60,
     velocity: 0,
     gravity: 0.45,
     jumpPower: -7.5,
     rotation: 0
 };
+
+// Загружаем изображение Деда Мороза
+setTimeout(() => {
+    loadSantaImage();
+}, 150);
 
 // Particles for explosion
 const particles = [];
@@ -705,12 +754,23 @@ function drawClouds() {
     ctx.globalAlpha = 1;
 }
 
-// Boeing 737 silhouette
+// Дед Мороз (или самолет, если изображение не загружено)
 function drawPlane() {
     ctx.save();
     ctx.translate(plane.x + plane.width / 2, plane.y + plane.height / 2);
     ctx.rotate(plane.rotation);
     
+    // Если изображение Деда Мороза загружено, рисуем его
+    if (santaImageLoaded && santaImage && santaImage.complete && santaImage.naturalWidth > 0) {
+        // Рисуем изображение Деда Мороза
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#4A90E2';
+        ctx.drawImage(santaImage, -plane.width / 2, -plane.height / 2, plane.width, plane.height);
+        ctx.restore();
+        return;
+    }
+    
+    // Fallback: рисуем векторный самолет, если изображение не загружено
     const w = plane.width;
     const h = plane.height;
     
