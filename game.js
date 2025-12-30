@@ -1,8 +1,39 @@
 // ==================== SUPABASE CONFIG ====================
+// Примечание: Это публичный (anon) ключ Supabase, безопасный для использования в клиентском коде
 const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Безопасная инициализация Supabase
+let supabase;
+try {
+    if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } else {
+        // Заглушка если Supabase не загружен
+        supabase = {
+            from: () => ({
+                select: () => Promise.resolve({ data: [], error: null }),
+                insert: () => Promise.resolve({ error: null }),
+                update: () => Promise.resolve({ error: null }),
+                eq: function() { return this; },
+                order: function() { return this; },
+                limit: function() { return this; }
+            })
+        };
+    }
+} catch (error) {
+    console.warn('Supabase initialization error:', error);
+    supabase = {
+        from: () => ({
+            select: () => Promise.resolve({ data: [], error: null }),
+            insert: () => Promise.resolve({ error: null }),
+            update: () => Promise.resolve({ error: null }),
+            eq: function() { return this; },
+            order: function() { return this; },
+            limit: function() { return this; }
+        })
+    };
+}
 
 // ==================== TELEGRAM INIT ====================
 let tg = window.Telegram?.WebApp;
