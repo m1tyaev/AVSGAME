@@ -1054,14 +1054,24 @@ function startGame() {
     initAudio();
     
     // Get player name (из Telegram или из поля ввода)
-    if (tg && getTelegramUserName()) {
-        // Если в Telegram, используем имя из аккаунта
-        playerName = getTelegramUserName();
-    } else if (playerNameInput) {
-        // Иначе используем введенное имя
-        playerName = playerNameInput.value.trim() || 'Пилот';
+    // Сначала проверяем, есть ли имя из Telegram
+    const telegramNameFromTG = tg ? getTelegramUserName() : null;
+    
+    if (telegramNameFromTG) {
+        // Если в Telegram, используем имя из аккаунта (приоритет)
+        playerName = telegramNameFromTG;
+        console.log('✅ Используем имя из Telegram:', playerName);
+    } else if (playerName && playerName.trim() !== '') {
+        // Если имя уже установлено (из localStorage или предыдущей игры), используем его
+        console.log('✅ Используем сохраненное имя:', playerName);
+    } else if (playerNameInput && playerNameInput.value.trim()) {
+        // Иначе используем введенное имя, если оно есть
+        playerName = playerNameInput.value.trim();
+        console.log('✅ Используем введенное имя:', playerName);
     } else {
-        playerName = playerName || 'Пилот';
+        // Если имени нет вообще, используем дефолтное
+        playerName = 'Пилот';
+        console.log('⚠️ Используем дефолтное имя:', playerName);
     }
     
     // Сохраняем в localStorage для использования вне Telegram
@@ -1193,10 +1203,15 @@ function initGame() {
     }
     
     // Получаем имя из Telegram или из localStorage
-    if (tg && getTelegramUserName()) {
-        playerName = getTelegramUserName();
+    const telegramUserName = tg ? getTelegramUserName() : null;
+    if (telegramUserName) {
+        playerName = telegramUserName;
+        console.log('✅ Имя получено из Telegram:', playerName);
     } else {
         playerName = localStorage.getItem('playerName') || '';
+        if (playerName) {
+            console.log('✅ Имя загружено из localStorage:', playerName);
+        }
     }
     
     // Инициализируем canvas
@@ -1263,19 +1278,33 @@ function initGame() {
     });
     
     // Настраиваем поле ввода имени
-    if (tg && getTelegramUserName()) {
+    // Используем уже полученное имя из Telegram (если есть)
+    if (telegramUserName || (tg && getTelegramUserName())) {
+        const finalTelegramName = telegramUserName || getTelegramUserName();
         // Если в Telegram, скрываем поле ввода и показываем имя пользователя
+        playerName = finalTelegramName; // Устанавливаем имя сразу
         const nameInputContainer = document.querySelector('.name-input-container');
         if (nameInputContainer) {
             nameInputContainer.innerHTML = `<div style="color: #4A90E2; padding: 12px; text-align: center; border: 2px solid #4A90E2; border-radius: 10px; background: rgba(74, 144, 226, 0.1);">
-                <strong>Игрок:</strong> ${getTelegramUserName()}
+                <strong>Игрок:</strong> ${finalTelegramName}
             </div>`;
+        }
+        // Скрываем поле ввода если оно есть
+        if (playerNameInput) {
+            playerNameInput.style.display = 'none';
         }
     } else if (playerNameInput) {
         // Если не в Telegram, показываем поле ввода
+        playerNameInput.style.display = 'block';
         if (playerName) {
             playerNameInput.value = playerName;
         }
+    }
+    
+    // Сохраняем имя в localStorage
+    if (playerName) {
+        localStorage.setItem('playerName', playerName);
+        console.log('✅ Имя игрока установлено:', playerName);
     }
     
     // Загружаем таблицу лидеров (с задержкой для загрузки Supabase)
