@@ -242,9 +242,6 @@ function resizeCanvas() {
     }
 }
 
-// Загружаем фоновое изображение
-loadBackgroundImage();
-
 // ==================== GAME VARIABLES ====================
 let gameState = 'start'; // 'start', 'playing', 'paused', 'exploding', 'gameover'
 let score = 0;
@@ -303,6 +300,9 @@ function loadBackgroundImage() {
     
     tryLoadImage();
 }
+
+// Загружаем фоновое изображение после объявления переменных
+loadBackgroundImage();
 
 // Plane (Boeing 737)
 const plane = {
