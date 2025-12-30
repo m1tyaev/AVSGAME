@@ -377,7 +377,12 @@ const plane = {
     velocity: 0,
     gravity: 0.45,
     jumpPower: -7.5,
-    rotation: 0
+    rotation: 0,
+    // Анимация
+    bobOffset: 0, // Для покачивания вверх-вниз
+    bobSpeed: 0.08, // Скорость покачивания
+    glowIntensity: 1, // Интенсивность свечения
+    glowSpeed: 0.05 // Скорость пульсации свечения
 };
 
 // Загружаем изображение Деда Мороза
