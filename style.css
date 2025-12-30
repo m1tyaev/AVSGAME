@@ -706,6 +706,53 @@ body {
     display: none;
 }
 
+/* Кнопка паузы */
+.pause-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, rgba(74, 144, 226, 0.9), rgba(45, 90, 135, 0.9));
+    border: 2px solid #4A90E2;
+    border-radius: 12px;
+    cursor: pointer;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 
+        0 4px 15px rgba(74, 144, 226, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(5px);
+}
+
+.pause-button.hidden {
+    display: none;
+}
+
+.pause-button:hover {
+    transform: scale(1.1);
+    box-shadow: 
+        0 6px 20px rgba(74, 144, 226, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, rgba(74, 144, 226, 1), rgba(45, 90, 135, 1));
+}
+
+.pause-button:active {
+    transform: scale(0.95);
+}
+
+.pause-icon {
+    font-size: 1.5rem;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    line-height: 1;
+}
+
 /* Скроллбар для таблицы лидеров */
 .leaderboard-list::-webkit-scrollbar {
     width: 6px;
@@ -778,5 +825,16 @@ body {
     .name-input {
         font-size: 1rem;
         padding: 10px 12px;
+    }
+    
+    .pause-button {
+        width: 45px;
+        height: 45px;
+        top: 15px;
+        right: 15px;
+    }
+    
+    .pause-icon {
+        font-size: 1.3rem;
     }
 }
