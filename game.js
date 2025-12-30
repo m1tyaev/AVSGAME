@@ -1,4 +1,6 @@
 // ==================== SUPABASE CONFIG ====================
+// Примечание: Это публичный (anon) ключ Supabase, безопасный для использования в клиентском коде
+// Он имеет ограниченные права доступа и предназначен для публичного использования
 const SUPABASE_URL = 'https://hxttbhlmshdhowmxnxvy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4dHRiaGxtc2hkaG93bXhueHZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDMzMjQsImV4cCI6MjA4MjU3OTMyNH0.CFRwCCzjPJo-tl5ZxXB6Ne1yOwQAoZmjmMqpkHyqXJ0';
 
@@ -1427,9 +1429,15 @@ function initGame() {
         const nameInputContainer = document.querySelector('.name-input-container');
         if (nameInputContainer) {
             const safeName = escapeHtml(currentTelegramName);
-            nameInputContainer.innerHTML = `<div style="color: #4A90E2; padding: 12px; text-align: center; border: 2px solid #4A90E2; border-radius: 10px; background: rgba(74, 144, 226, 0.1);">
-                <strong>Игрок:</strong> ${safeName}
-            </div>`;
+            // Используем безопасную вставку через создание элементов
+            nameInputContainer.innerHTML = '';
+            const playerDiv = document.createElement('div');
+            playerDiv.style.cssText = 'color: #4A90E2; padding: 12px; text-align: center; border: 2px solid #4A90E2; border-radius: 10px; background: rgba(74, 144, 226, 0.1);';
+            const strongEl = document.createElement('strong');
+            strongEl.textContent = 'Игрок: ';
+            playerDiv.appendChild(strongEl);
+            playerDiv.appendChild(document.createTextNode(safeName));
+            nameInputContainer.appendChild(playerDiv);
         }
         // Скрываем поле ввода если оно есть
         if (playerNameInput) {
