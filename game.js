@@ -175,6 +175,10 @@ const difficulty = {
 let currentSpeed = difficulty.baseSpeed;
 let currentGap = difficulty.baseGap;
 
+// Background image
+let backgroundImage = null;
+let backgroundImageLoaded = false;
+
 // Plane/Santa image
 let santaImage = null;
 let santaImageLoaded = false;
@@ -188,8 +192,49 @@ const plane = {
     velocity: 0,
     gravity: 0.45,
     jumpPower: -7.5,
-    rotation: 0
+    rotation: 0,
+    // Анимация
+    bobOffset: 0, // Для покачивания вверх-вниз
+    bobSpeed: 0.08, // Скорость покачивания
+    glowIntensity: 0, // Интенсивность свечения
+    glowSpeed: 0.05 // Скорость пульсации свечения
 };
+
+// Загружаем фоновое изображение
+function loadBackgroundImage() {
+    const imageNames = ['background.png', 'background.jpg', 'background.webp'];
+    let imageIndex = 0;
+    
+    function tryLoadBackground() {
+        if (imageIndex < imageNames.length) {
+            const imagePath = imageNames[imageIndex];
+            const img = new Image();
+            
+            img.onload = function() {
+                backgroundImage = img;
+                backgroundImageLoaded = true;
+                console.log('✅ Фоновое изображение загружено:', imageNames[imageIndex]);
+                console.log('📐 Размеры фона:', backgroundImage.width, 'x', backgroundImage.height);
+            };
+            
+            img.onerror = function() {
+                console.warn('❌ Не удалось загрузить фон:', imageNames[imageIndex]);
+                imageIndex++;
+                if (imageIndex < imageNames.length) {
+                    tryLoadBackground();
+                } else {
+                    backgroundImageLoaded = false;
+                    console.warn('⚠️ Не удалось загрузить фоновое изображение, используется градиент');
+                }
+            };
+            
+            img.src = imagePath;
+            console.log('🔄 Пытаемся загрузить фон:', imagePath);
+        }
+    }
+    
+    tryLoadBackground();
+}
 
 // Загружаем изображение Деда Мороза
 function loadSantaImage() {
@@ -473,13 +518,32 @@ function updateAndDrawParticles() {
 // ==================== DRAWING FUNCTIONS ====================
 function drawBackground() {
     if (!canvas || !ctx) return;
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#0a0e27');
-    gradient.addColorStop(0.5, '#1a3a5e');
-    gradient.addColorStop(1, '#2d5a87');
     
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Если фоновое изображение загружено, рисуем его
+    if (backgroundImageLoaded && backgroundImage && backgroundImage.complete && backgroundImage.naturalWidth > 0) {
+        // Рисуем фоновое изображение на весь canvas (растягиваем)
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        
+        // Добавляем очень легкий оверлей для лучшей видимости игровых элементов
+        const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        overlay.addColorStop(0, 'rgba(10, 26, 46, 0.05)');
+        overlay.addColorStop(0.5, 'rgba(26, 58, 94, 0.03)');
+        overlay.addColorStop(1, 'rgba(45, 90, 135, 0.05)');
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+        // Fallback: градиентный фон
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#0a0e27');
+        gradient.addColorStop(0.5, '#1a3a5e');
+        gradient.addColorStop(1, '#2d5a87');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 function drawStars() {
@@ -518,7 +582,10 @@ function drawClouds() {
 function drawPlane() {
     if (!ctx) return;
     ctx.save();
-    ctx.translate(plane.x + plane.width / 2, plane.y + plane.height / 2);
+    
+    // Применяем анимацию покачивания
+    const bobY = Math.sin(plane.bobOffset) * 3; // Покачивание вверх-вниз на 3 пикселя
+    ctx.translate(plane.x + plane.width / 2, plane.y + plane.height / 2 + bobY);
     ctx.rotate(plane.rotation);
     
     // Если изображение Деда Мороза загружено, рисуем его
@@ -527,13 +594,17 @@ function drawPlane() {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         
-        // Свечение вокруг Деда Мороза
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#4A90E2';
+        // Пульсирующее свечение
+        const glowAlpha = 0.6 + Math.sin(plane.glowIntensity) * 0.3;
+        const glowBlur = 20 + Math.sin(plane.glowIntensity) * 10;
+        
+        // Внешнее свечение (более мягкое)
+        ctx.shadowBlur = glowBlur;
+        ctx.shadowColor = `rgba(74, 144, 226, ${glowAlpha})`;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
         
-        // Рисуем изображение с сохранением пропорций
+        // Рисуем изображение Деда Мороза с улучшенной четкостью
         ctx.drawImage(
             santaImage,
             -plane.width / 2,
@@ -541,6 +612,20 @@ function drawPlane() {
             plane.width,
             plane.height
         );
+        
+        // Дополнительное внутреннее свечение для четкости
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.globalAlpha = 0.15;
+        ctx.drawImage(
+            santaImage,
+            -plane.width / 2,
+            -plane.height / 2,
+            plane.width,
+            plane.height
+        );
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
         
         ctx.restore();
         return;
@@ -773,7 +858,20 @@ function updatePlane() {
     plane.velocity += plane.gravity;
     plane.y += plane.velocity;
     
+    // Плавное вращение в зависимости от скорости
     plane.rotation = Math.max(-0.4, Math.min(0.4, plane.velocity * 0.04));
+    
+    // Обновляем анимацию покачивания
+    plane.bobOffset += plane.bobSpeed;
+    if (plane.bobOffset > Math.PI * 2) {
+        plane.bobOffset -= Math.PI * 2;
+    }
+    
+    // Обновляем пульсацию свечения
+    plane.glowIntensity += plane.glowSpeed;
+    if (plane.glowIntensity > Math.PI * 2) {
+        plane.glowIntensity -= Math.PI * 2;
+    }
     
     if (plane.y < 0) {
         plane.y = 0;
@@ -868,6 +966,9 @@ function startGame() {
     plane.y = canvas.height / 2;
     plane.velocity = 0;
     plane.rotation = 0;
+    // Сбрасываем анимацию
+    plane.bobOffset = 0;
+    plane.glowIntensity = 0;
     
     startScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
@@ -953,9 +1054,10 @@ function initGame() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    // Загружаем изображение Деда Мороза
+    // Загружаем изображения
     if (canvas) {
         setTimeout(() => {
+            loadBackgroundImage();
             loadSantaImage();
         }, 100);
     }
